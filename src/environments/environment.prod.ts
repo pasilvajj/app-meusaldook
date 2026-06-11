@@ -1,4 +1,5 @@
+/** Produção (Vercel): chamadas relativas `/api/...` — proxy HTTPS em vercel.json → EC2. */
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://3.141.199.149:8081',
+  apiBaseUrl: '',
 };

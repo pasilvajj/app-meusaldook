@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/app-meusaldook/browser",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://3.141.199.149:8081/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
