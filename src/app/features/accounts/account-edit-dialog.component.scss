@@ -1,0 +1,38 @@
+.acc-balance-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem 1rem;
+  align-items: flex-start;
+  margin-top: 0.25rem;
+}
+
+.acc-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  font-size: 0.88rem;
+}
+
+.acc-info-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.15rem;
+}
+
+.acc-info-link {
+  color: var(--acc-teal, #0d9488) !important;
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .acc-balance-row {
+    grid-template-columns: 1fr;
+  }
+
+  .acc-radio-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}

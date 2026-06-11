@@ -1,0 +1,73 @@
+<div mat-dialog-title class="dlg-header">
+  <h2 class="dlg-title">
+    Definir metas de {{ data.kind === 'EXPENSE' ? 'despesa' : 'receita' }} para {{ monthTitle }}
+  </h2>
+  <button mat-icon-button type="button" mat-dialog-close class="dlg-close" aria-label="Fechar">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="dlg-body">
+  <form [formGroup]="form">
+    <div class="table-scroll">
+      <table class="goals-table">
+        <thead>
+          <tr>
+            <th class="col-cat">Categoria</th>
+            <th class="col-num col-current">{{ colCurrentLabel() }}</th>
+            <th class="col-num col-ref">{{ colPrevMonthLabel() }}</th>
+            <th class="col-num col-ref">{{ colPrevYearLabel() }}</th>
+          </tr>
+        </thead>
+        <tbody formArrayName="rows">
+          @for (g of rows.controls; track g.value.categoryId; let i = $index) {
+            <tr [formGroupName]="i">
+              <td class="col-cat cat">{{ g.get('categoryName')?.value }}</td>
+              <td class="col-num">
+                <input
+                  class="input-underline"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  appBrlCurrencyInput
+                  formControlName="amount"
+                />
+              </td>
+              <td class="col-num col-ref">R$ {{ g.get('prevMonth')?.value | number: '1.2-2' }}</td>
+              <td class="col-num col-ref">R$ {{ g.get('prevYear')?.value | number: '1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </form>
+
+  @if (showTotalEditor()) {
+    <div class="total-editor">
+      <label class="sr-only" for="totalDraft">Meta total do mês</label>
+      <input
+        id="totalDraft"
+        class="input-underline input-underline--wide"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        appBrlCurrencyInput
+        [formControl]="totalDraft"
+      />
+      <button mat-stroked-button type="button" (click)="distributeTotal()">Distribuir igualmente</button>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="dlg-footer" align="end">
+  <div class="footer-main">
+    <span class="total-line">
+      <span class="total-label">Meta total do mês (R$)</span>
+      <strong class="total-val">R$ {{ rowsTotal() | number: '1.2-2' }}</strong>
+    </span>
+    <button mat-button type="button" class="link-edit" (click)="toggleTotalEditor()">Editar total</button>
+  </div>
+  <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid || saving()">
+    {{ saving() ? 'A guardar…' : 'Salvar' }}
+  </button>
+</mat-dialog-actions>

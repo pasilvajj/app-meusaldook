@@ -1,0 +1,230 @@
+:host {
+  display: block;
+  --dlg-ink: #1e293b;
+  --dlg-muted: #94a3b8;
+  --dlg-line: #e2e8f0;
+  --dlg-teal: #0d9488;
+  --dlg-orange: #ea580c;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--dlg-ink);
+}
+
+.dlg-header {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 0.75rem !important;
+  margin: 0 !important;
+  border-bottom: 1px solid var(--dlg-line);
+}
+
+.dlg-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--dlg-ink);
+  padding-right: 0.5rem;
+}
+
+.dlg-close {
+  flex-shrink: 0;
+  margin: -0.35rem -0.25rem 0 0;
+  color: var(--dlg-muted);
+}
+
+.dlg-body {
+  padding: 0 1.25rem 1rem !important;
+  margin: 0 !important;
+  max-height: min(78vh, 720px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 0.5rem;
+  max-height: calc(78vh - 11rem);
+  -webkit-overflow-scrolling: touch;
+}
+
+.goals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.goals-table th,
+.goals-table td {
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid var(--dlg-line);
+  vertical-align: middle;
+}
+
+.goals-table thead th {
+  text-align: left;
+  font-weight: 600;
+  color: #64748b;
+  background: #fafbfc;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.goals-table .col-num {
+  text-align: right;
+  width: 22%;
+  min-width: 7rem;
+}
+
+.goals-table .col-cat {
+  width: 34%;
+}
+
+.goals-table .col-current {
+  color: var(--dlg-ink);
+}
+
+.goals-table .col-ref {
+  color: var(--dlg-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.cat {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.input-underline {
+  width: 100%;
+  max-width: 8.5rem;
+  margin-left: auto;
+  display: block;
+  text-align: right;
+  border: none;
+  border-bottom: 1px solid #cbd5e1;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.4rem 0.15rem 0.25rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dlg-ink);
+  font-family: inherit;
+}
+
+.input-underline:focus {
+  outline: none;
+  border-bottom-color: var(--dlg-teal);
+  border-bottom-width: 2px;
+  margin-bottom: -1px;
+}
+
+.input-underline.ng-invalid.ng-touched {
+  border-bottom-color: #e11d48;
+}
+
+.input-underline--wide {
+  max-width: 12rem;
+  margin-left: 0;
+  text-align: left;
+}
+
+.total-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px dashed var(--dlg-line);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dlg-footer {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem 1.15rem !important;
+  margin: 0 !important;
+  border-top: 1px solid var(--dlg-line);
+  background: #fff;
+}
+
+.footer-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+.total-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.total-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.total-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--dlg-ink);
+}
+
+.link-edit {
+  color: var(--dlg-orange) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  text-decoration: none;
+  min-width: auto;
+  padding: 0 0.35rem !important;
+}
+
+.link-edit:hover {
+  text-decoration: underline;
+}
+
+.dlg-footer .mat-mdc-raised-button.mat-primary,
+.dlg-footer button.mat-mdc-button-base.mat-mdc-unelevated-button.mat-primary {
+  border-radius: 999px;
+  padding-inline: 1.35rem;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .goals-table .col-ref {
+    display: none;
+  }
+
+  .goals-table thead th.col-ref {
+    display: none;
+  }
+}

@@ -1,0 +1,115 @@
+<div class="cat-page">
+  <div class="cat-workspace">
+    <aside class="cat-sidebar">
+      <mat-card class="cat-filter-card" appearance="outlined">
+        <button
+          type="button"
+          class="cat-filter-item"
+          [class.cat-filter-item--on]="kindFilter() === 'EXPENSE'"
+          (click)="setKind('EXPENSE')"
+        >
+          <span class="cat-filter-label">
+            <mat-icon class="cat-filter-ico">arrow_downward</mat-icon>
+            Despesas
+          </span>
+          <span class="cat-filter-badge">{{ expenseCount() }}</span>
+        </button>
+        <button
+          type="button"
+          class="cat-filter-item"
+          [class.cat-filter-item--on]="kindFilter() === 'INCOME'"
+          (click)="setKind('INCOME')"
+        >
+          <span class="cat-filter-label">
+            <mat-icon class="cat-filter-ico">arrow_upward</mat-icon>
+            Receitas
+          </span>
+          <span class="cat-filter-badge">{{ incomeCount() }}</span>
+        </button>
+      </mat-card>
+      <button mat-stroked-button type="button" class="cat-export" color="primary" (click)="exportComingSoon()">
+        Exportar categorias ativas
+      </button>
+    </aside>
+
+    <section class="cat-main">
+      @if (loading()) {
+        <div class="cat-center">
+          <mat-spinner diameter="40" />
+        </div>
+      } @else {
+        <mat-card class="cat-table-card" appearance="outlined">
+          @if (displayedRows().length === 0) {
+            <div class="cat-empty">Sem categorias deste tipo. Utiliza o botão + para criar.</div>
+          } @else {
+            <table mat-table [dataSource]="displayedRows()" class="cat-table">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Nome</th>
+                <td mat-cell *matCellDef="let item">
+                  <span class="cat-name-cell" [style.padding-left.rem]="item.depth * 1.15">
+                    @if (item.depth > 0) {
+                      <mat-icon class="cat-branch" aria-hidden="true">subdirectory_arrow_right</mat-icon>
+                    }
+                    <span class="cat-name-text">{{ item.row.name }}</span>
+                  </span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="kind">
+                <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                <td mat-cell *matCellDef="let item">{{ kindLabel(item.row.kind) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="cat-actions-th"></th>
+                <td mat-cell *matCellDef="let item" class="cat-actions-td">
+                  <button
+                    mat-icon-button
+                    type="button"
+                    aria-label="Menu de ações da categoria"
+                    [matMenuTriggerFor]="catRowMenu"
+                    [matMenuTriggerData]="{ row: item.row }"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          }
+        </mat-card>
+      }
+    </section>
+  </div>
+
+  <button
+    mat-fab
+    color="primary"
+    type="button"
+    class="cat-fab"
+    aria-label="Nova categoria"
+    (click)="openCreateModal()"
+  >
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
+
+<mat-menu #catRowMenu="matMenu">
+  <ng-template matMenuContent let-row="row">
+    <button mat-menu-item type="button" (click)="openEditModal(row)">
+      <mat-icon>edit</mat-icon>
+      <span>Editar</span>
+    </button>
+    <button mat-menu-item type="button" (click)="openSubcategoryModal(row)">
+      <mat-icon>add_circle_outline</mat-icon>
+      <span>Criar subcategoria</span>
+    </button>
+    <button mat-menu-item type="button" (click)="inactivateComingSoon()">
+      <mat-icon>unpublished</mat-icon>
+      <span>Inativar</span>
+    </button>
+    <button mat-menu-item type="button" (click)="remove(row)">
+      <mat-icon color="warn">delete_outline</mat-icon>
+      <span>Excluir</span>
+    </button>
+  </ng-template>
+</mat-menu>

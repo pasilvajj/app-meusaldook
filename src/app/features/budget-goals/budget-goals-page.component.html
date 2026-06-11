@@ -1,0 +1,183 @@
+<div class="goals-page">
+ <mat-tab-group
+    class="tabs"
+    animationDuration="0ms"
+    [selectedIndex]="tabIndex()"
+    (selectedIndexChange)="onTabIndex($event)"
+  >
+    <mat-tab label="Despesas"></mat-tab>
+    <mat-tab label="Receitas"></mat-tab>
+  </mat-tab-group>
+
+  <div class="workspace workspace--split">
+      <aside class="sidebar">
+        <mat-card class="period-card" appearance="outlined">
+          <button mat-icon-button type="button" (click)="shiftMonth(-1)" aria-label="Mês anterior">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="period-label">{{ periodLabelShort() }}</span>
+          <button mat-icon-button type="button" (click)="shiftMonth(1)" aria-label="Mês seguinte">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+          <mat-icon class="muted period-cal">calendar_month</mat-icon>
+          <button mat-icon-button type="button" aria-label="Definições" disabled>
+            <mat-icon>settings</mat-icon>
+          </button>
+        </mat-card>
+
+        @if (!loading() && hasCategories() && definedSummary(); as ds) {
+          <mat-card class="side-block" appearance="outlined">
+            <h3 class="side-block-title">Categorias definidas</h3>
+            <div class="side-bar-wrap">
+              <div class="goal-bar-track" role="img" [attr.aria-label]="'Progresso: ' + (ds.pct | number: '1.2-2') + ' por cento'">
+                <span class="goal-bar-fill" [ngClass]="ds.barClass" [style.width.%]="ds.pctBar"></span>
+                <span class="goal-bar-label">{{ ds.pct | number: '1.2-2' }}%</span>
+              </div>
+            </div>
+            <dl class="side-dl">
+              <div class="side-dl-row">
+                <dt>Total das metas</dt>
+                <dd>R$ {{ ds.totalMeta | number: '1.2-2' }}</dd>
+              </div>
+              <div class="side-dl-row">
+                <dt>Total confirmado</dt>
+                <dd
+                  class="side-dd-strong"
+                  [class.side-dd--neg]="isExpenseTab() && ds.totalRealizado > 0"
+                  [class.side-dd--pos]="!isExpenseTab() && ds.totalRealizado > 0"
+                >
+                  @if (isExpenseTab() && ds.totalRealizado > 0) {
+                    −R$ {{ ds.totalRealizado | number: '1.2-2' }}
+                  } @else {
+                    R$ {{ ds.totalRealizado | number: '1.2-2' }}
+                  }
+                </dd>
+              </div>
+              <div class="side-dl-row">
+                <dt>Total a realizar</dt>
+                <dd>R$ {{ ds.totalARealizar | number: '1.2-2' }}</dd>
+              </div>
+            </dl>
+          </mat-card>
+
+          @if (monthEnvelope(); as me) {
+            <mat-card class="side-block" appearance="outlined">
+              <h3 class="side-block-title">Total do mês</h3>
+              <div class="side-bar-wrap">
+                <div class="goal-bar-track" role="img" [attr.aria-label]="'Progresso mensal: ' + (me.pct | number: '1.2-2') + ' por cento'">
+                  <span class="goal-bar-fill" [ngClass]="me.barClass" [style.width.%]="me.pctBar"></span>
+                  <span class="goal-bar-label">{{ me.pct | number: '1.2-2' }}%</span>
+                </div>
+              </div>
+              <dl class="side-dl">
+                <div class="side-dl-row">
+                  <dt>Meta definida</dt>
+                  <dd>R$ {{ me.metaMes | number: '1.2-2' }}</dd>
+                </div>
+                <div class="side-dl-row">
+                  <dt>Total confirmado</dt>
+                  <dd
+                    class="side-dd-strong"
+                    [class.side-dd--neg]="isExpenseTab() && me.totalConfirmado > 0"
+                    [class.side-dd--pos]="!isExpenseTab() && me.totalConfirmado > 0"
+                  >
+                    @if (isExpenseTab() && me.totalConfirmado > 0) {
+                      −R$ {{ me.totalConfirmado | number: '1.2-2' }}
+                    } @else {
+                      R$ {{ me.totalConfirmado | number: '1.2-2' }}
+                    }
+                  </dd>
+                </div>
+                <div class="side-dl-row">
+                  <dt>Total a realizar</dt>
+                  <dd>R$ {{ me.aRealizar | number: '1.2-2' }}</dd>
+                </div>
+              </dl>
+            </mat-card>
+          }
+
+          <a mat-button class="compet-link" routerLink="/dashboard">
+            <mat-icon>swap_horiz</mat-icon>
+            Visão da competência
+          </a>
+        }
+      </aside>
+
+      <section class="main-area">
+        @if (loading()) {
+          <div class="loading">
+            <mat-spinner diameter="40" />
+          </div>
+        } @else if (!hasCategories()) {
+          <mat-card class="panel empty-panel" appearance="outlined">
+            <mat-icon class="big muted">category</mat-icon>
+            <p class="empty-title">Sem categorias</p>
+            <p class="muted">Cria categorias de {{ tabIndex() === 0 ? 'despesa' : 'receita' }} para definires metas.</p>
+            <a mat-flat-button color="primary" routerLink="/categories">Gerir categorias</a>
+          </mat-card>
+        } @else {
+          <mat-card class="panel detail-panel" appearance="outlined">
+            <div class="detail-toolbar">
+              <div>
+                <h2 class="detail-title">Metas do período</h2>
+                <p class="detail-sub">Situação confirmada</p>
+              </div>
+              <div class="detail-actions">
+                <button mat-stroked-button color="primary" type="button" (click)="openDefine()">Editar metas</button>
+              </div>
+            </div>
+
+            @if (!hasGoals()) {
+              <p class="no-goals-hint muted">
+                Ainda não há metas definidas neste mês. Podes editar para definir valores — abaixo vês o realizado por
+                categoria.
+              </p>
+            }
+
+            <div class="goals-table-wrap">
+              <div class="goals-grid goals-grid--head">
+                <span class="gh gh--cat">Categoria</span>
+                <span class="gh gh--num">Meta</span>
+                <span class="gh gh--num">Realizado</span>
+                <span class="gh gh--num">A realizar</span>
+                <span class="gh gh--num">Excedente</span>
+              </div>
+              @for (row of tableRowsWithMeta(); track row.categoryId) {
+                <div class="goals-grid goals-grid--row">
+                  <div class="cat-bar-col">
+                    <span class="gcat">{{ row.categoryName }}</span>
+                    <div class="goal-bar-track" role="img" [attr.aria-label]="row.categoryName + ': ' + (row.pct | number: '1.2-2') + ' por cento'">
+                      <span class="goal-bar-fill" [ngClass]="row.barClass" [style.width.%]="row.pctBar"></span>
+                      <span class="goal-bar-label">{{ row.pct | number: '1.2-2' }}%</span>
+                    </div>
+                  </div>
+                  <span class="gnum">
+                    @if (row.hasMeta) {
+                      R$ {{ row.meta | number: '1.2-2' }}
+                    } @else {
+                      <span class="gnum-dash">—</span>
+                    }
+                  </span>
+                  <span class="gnum">R$ {{ row.realizado | number: '1.2-2' }}</span>
+                  <span class="gnum">
+                    @if (row.hasMeta && row.aRealizar !== null) {
+                      R$ {{ row.aRealizar | number: '1.2-2' }}
+                    } @else {
+                      <span class="gnum-dash">—</span>
+                    }
+                  </span>
+                  <span class="gnum" [class.gnum--exc]="(row.excedente ?? 0) > 0">
+                    @if (row.hasMeta && row.excedente !== null) {
+                      R$ {{ row.excedente | number: '1.2-2' }}
+                    } @else {
+                      <span class="gnum-dash">—</span>
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+          </mat-card>
+        }
+      </section>
+    </div>
+</div>

@@ -1,0 +1,125 @@
+:host {
+  --acc-teal: #0d9488;
+  --acc-ink: #0f172a;
+  --acc-muted: #64748b;
+  --acc-line: #e2e8f0;
+  --acc-footer: #f8fafc;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  display: block;
+  font-family: var(--font-body);
+  color: var(--acc-ink);
+}
+
+.acc-dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1.1rem 1rem 0.75rem 1.25rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--acc-line);
+}
+
+.acc-dialog-close {
+  color: var(--acc-muted);
+}
+
+.acc-dialog-body {
+  padding: 1.25rem 1.25rem 0.5rem !important;
+  margin: 0;
+}
+
+.acc-dialog-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+
+.acc-type-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.acc-field--grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.acc-help-btn {
+  margin-top: 0.35rem;
+  color: var(--acc-muted);
+  flex-shrink: 0;
+}
+
+.acc-field {
+  width: 100%;
+}
+
+.acc-field--full {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.acc-name-suffix {
+  color: var(--acc-teal);
+  opacity: 0.85;
+}
+
+.acc-prefix {
+  color: var(--acc-muted);
+  font-size: 0.9rem;
+}
+
+.acc-extra-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.35rem 0 0.25rem;
+}
+
+.acc-extra-btn {
+  border-color: color-mix(in srgb, var(--acc-teal) 55%, var(--acc-line)) !important;
+  color: var(--acc-teal) !important;
+  font-weight: 600;
+  border-radius: 10px !important;
+}
+
+.acc-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.acc-dialog-actions {
+  margin: 0 !important;
+  padding: 0.85rem 1.25rem 1.1rem !important;
+  background: var(--acc-footer);
+  border-top: 1px solid var(--acc-line);
+}
+
+.acc-save-btn {
+  border-radius: 999px !important;
+  padding-inline: 1.35rem !important;
+  font-weight: 650 !important;
+  --mdc-filled-button-container-color: var(--acc-teal);
+  --mdc-filled-button-label-text-color: #fff;
+}
+
+.acc-save-btn mat-icon {
+  font-size: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.25rem;
+}
+
+@media (max-width: 520px) {
+  .acc-dialog-row2 {
+    grid-template-columns: 1fr;
+  }
+}

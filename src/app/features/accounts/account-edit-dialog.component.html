@@ -1,0 +1,105 @@
+<h2 mat-dialog-title class="acc-dialog-title">
+  <span>Editar conta</span>
+  <button mat-icon-button type="button" mat-dialog-close class="acc-dialog-close" aria-label="Fechar">
+    <mat-icon>close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="acc-dialog-body">
+  <form [formGroup]="form" (ngSubmit)="save()" id="acc-edit-form">
+    <div class="acc-dialog-row2">
+      <div class="acc-type-cell">
+        <mat-form-field appearance="outline" class="acc-field acc-field--grow">
+          <mat-label>Tipo</mat-label>
+          <mat-select formControlName="accountType" required>
+            @for (opt of typeOptions; track opt.id) {
+              <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <button
+          mat-icon-button
+          type="button"
+          tabindex="-1"
+          class="acc-help-btn"
+          matTooltip="Conta corrente, cartão, dinheiro ou outros activos (MVP local)."
+          aria-label="Ajuda sobre tipo de conta"
+        >
+          <mat-icon>help_outline</mat-icon>
+        </button>
+      </div>
+
+      <mat-form-field appearance="outline" class="acc-field">
+        <mat-label>Moeda</mat-label>
+        <mat-select formControlName="currency">
+          <mat-option value="BRL">🇧🇷 Real (R$)</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="acc-field acc-field--full">
+      <mat-label>Nome</mat-label>
+      <input matInput formControlName="name" required maxlength="120" autocomplete="off" />
+      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">savings</mat-icon>
+      @if (form.controls.name.hasError('required') && form.controls.name.touched) {
+        <mat-error>Indica um nome para a conta</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="acc-field acc-field--full">
+      <mat-label>Data do saldo inicial</mat-label>
+      <input matInput type="date" formControlName="initialBalanceDate" required />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        tabindex="-1"
+        matTooltip="Data de referência do saldo inicial no extrato."
+        aria-label="Ajuda data do saldo inicial"
+      >
+        <mat-icon>help_outline</mat-icon>
+      </button>
+      @if (form.controls.initialBalanceDate.hasError('required') && form.controls.initialBalanceDate.touched) {
+        <mat-error>Indica a data</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="acc-balance-row">
+      <mat-form-field appearance="outline" class="acc-field acc-field--grow">
+        <mat-label>{{ saldoFieldLabel() }}</mat-label>
+        <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
+        <input matInput type="number" formControlName="initialBalanceAmount" min="0" step="0.01" required />
+      </mat-form-field>
+      <mat-radio-group class="acc-radio-group" formControlName="saldoCreditorDebtor" aria-label="Natureza do saldo">
+        <mat-radio-button value="CREDITOR">Credor</mat-radio-button>
+        <mat-radio-button value="DEBTOR">Devedor</mat-radio-button>
+      </mat-radio-group>
+    </div>
+
+    <mat-form-field appearance="outline" class="acc-field acc-field--full">
+      <mat-label>Considerar saldo</mat-label>
+      <mat-select formControlName="considerBalanceMode" required>
+        @for (opt of considerOptions; track opt.id) {
+          <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="acc-info-row">
+      <button type="button" mat-button class="acc-info-link" (click)="infoLink()">+info</button>
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="acc-dialog-actions">
+  <button
+    mat-flat-button
+    color="primary"
+    type="submit"
+    form="acc-edit-form"
+    class="acc-save-btn"
+    [disabled]="form.invalid || saving()"
+  >
+    Salvar
+  </button>
+</mat-dialog-actions>

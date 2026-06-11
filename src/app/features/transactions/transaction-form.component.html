@@ -1,0 +1,273 @@
+@if (loading()) {
+  <div class="center" [class.center--dialog]="inDialog">
+    <mat-spinner diameter="40" />
+  </div>
+} @else {
+  @if (inDialog && expenseLayout) {
+    <div mat-dialog-title class="tx-dlg-title tx-dlg-title--expense">
+      <button type="button" class="tx-title-menu" [matMenuTriggerFor]="kindMenu" aria-label="Tipo de lançamento">
+        <span>{{ dialogTitle() }}</span>
+        <mat-icon class="tx-title-chevron">arrow_drop_down</mat-icon>
+      </button>
+      <button mat-icon-button type="button" mat-dialog-close class="tx-dlg-close" aria-label="Fechar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <mat-menu #kindMenu="matMenu">
+      <button mat-menu-item type="button" (click)="setDialogKind('EXPENSE')">Nova despesa</button>
+      <button mat-menu-item type="button" (click)="setDialogKind('INCOME')">Nova receita</button>
+    </mat-menu>
+
+    <mat-dialog-content class="tx-dlg-content tx-dlg-content--expense">
+      <form id="tx-form-expense" [formGroup]="form" class="form form--expense" (ngSubmit)="submit()">
+        <div class="tx-exp-grid">
+          <div class="tx-exp-row tx-exp-row--3">
+            <mat-form-field appearance="outline" class="tx-field tx-field--amount">
+              <mat-label>Valor (R$)</mat-label>
+              <span matTextPrefix class="tx-prefix">R$&nbsp;</span>
+              <input
+                matInput
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                [readonly]="isValorLockedByParcel()"
+                [value]="expenseAmountText()"
+                (input)="onExpenseAmountInput($event)"
+                (blur)="onExpenseAmountBlur()"
+              />
+              @if (form.controls.amount.hasError('min') && form.controls.amount.touched) {
+                <mat-error>Informe um valor igual ou superior a 0,01</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="tx-field">
+              <mat-label>Data</mat-label>
+              <input matInput [matDatepicker]="occPick" formControlName="occurredDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="occPick" />
+              <mat-datepicker #occPick />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="tx-field">
+              <mat-label>Repetição</mat-label>
+              <mat-select formControlName="repetition">
+                <mat-option value="UNICA">Única</mat-option>
+                <mat-option value="PARCELADO">Parcelada</mat-option>
+                <mat-option value="FIXA">Fixa</mat-option>
+              </mat-select>
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                matTooltip="Única: um lançamento. Parcelada: várias prestações. Fixa: recorrente (em desenvolvimento)."
+                aria-label="Ajuda sobre repetição"
+              >
+                <mat-icon>help_outline</mat-icon>
+              </button>
+            </mat-form-field>
+          </div>
+
+          @if (form.controls.repetition.value === 'PARCELADO') {
+            <div class="tx-exp-row tx-exp-row--3">
+              <mat-form-field appearance="outline" class="tx-field">
+                <mat-label>Periodicidade</mat-label>
+                <mat-select formControlName="installmentPeriodicity">
+                  <mat-option value="MENSAL">mensal</mat-option>
+                  <mat-option value="SEMANAL">semanal</mat-option>
+                  <mat-option value="TRIMESTRAL">trimestral</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="tx-field">
+                <mat-label>Número de parcelas</mat-label>
+                <input matInput type="number" min="2" max="999" formControlName="installmentCount" />
+              </mat-form-field>
+              <div class="tx-personalize-wrap">
+                <button mat-button type="button" class="tx-personalize-btn" (click)="openRepetitionCustomize()">
+                  <mat-icon>settings</mat-icon>
+                  Personalizar
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (form.controls.repetition.value === 'FIXA') {
+            <div class="tx-exp-row">
+              <div class="tx-personalize-wrap tx-personalize-wrap--full">
+                <button mat-button type="button" class="tx-personalize-btn" (click)="openRepetitionCustomize()">
+                  <mat-icon>settings</mat-icon>
+                  Definir repetição
+                </button>
+              </div>
+            </div>
+          }
+
+          <div class="tx-exp-row tx-exp-row--2">
+            <mat-form-field appearance="outline" class="tx-field">
+              <mat-label>Descrição</mat-label>
+              <input matInput type="text" formControlName="summary" autocomplete="off" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="tx-field">
+              <mat-label>Conta</mat-label>
+              <mat-select formControlName="accountKey">
+                @for (a of expenseAccountOptions(); track a.publicKey) {
+                  <mat-option [value]="a.publicKey">{{ a.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="tx-exp-row">
+            <mat-form-field appearance="outline" class="tx-field tx-field--full">
+              <mat-label>Categoria</mat-label>
+              <mat-select formControlName="categoryId" required>
+                @for (c of filteredCategories(); track c.id) {
+                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="tx-exp-row">
+            <mat-form-field appearance="outline" class="tx-field tx-field--full">
+              <mat-label>Observações</mat-label>
+              <textarea matInput rows="3" formControlName="notes" maxlength="400"></textarea>
+              <mat-hint align="end">{{ notesChars() }} / 400</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <div class="tx-exp-row">
+            <mat-form-field appearance="outline" class="tx-field tx-field--full">
+              <mat-label>Tags</mat-label>
+              <input matInput type="text" formControlName="tags" placeholder="ex.: mercado, fixo" autocomplete="off" />
+            </mat-form-field>
+          </div>
+        </div>
+
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+      </form>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="tx-dlg-actions tx-dlg-actions--expense" align="end">
+      <div class="tx-dlg-actions-left">
+        <button mat-icon-button type="button" class="tx-foot-icon tx-foot-icon--on" matTooltip="Pago (em breve)" (click)="$event.preventDefault()">
+          <mat-icon>check_circle</mat-icon>
+        </button>
+        <button mat-icon-button type="button" class="tx-foot-icon" matTooltip="Reconciliado (em breve)" disabled>
+          <mat-icon>done_all</mat-icon>
+        </button>
+        <button mat-icon-button type="button" class="tx-foot-icon" matTooltip="Anexo (em breve)" disabled>
+          <mat-icon>attach_file</mat-icon>
+        </button>
+      </div>
+      <div class="tx-save-group">
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          form="tx-form-expense"
+          class="tx-save-main"
+          [disabled]="form.invalid || amountBelowMin()"
+        >
+          Salvar
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          form="tx-form-expense"
+          class="tx-save-plus"
+          [disabled]="form.invalid || amountBelowMin()"
+          aria-label="Guardar"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+    </mat-dialog-actions>
+  } @else if (inDialog) {
+    <div mat-dialog-title class="tx-dlg-title">
+      <span class="tx-dlg-title-text">{{ title() }}</span>
+      <button mat-icon-button type="button" mat-dialog-close class="tx-dlg-close" aria-label="Fechar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <mat-dialog-content class="tx-dlg-content">
+      <form id="tx-dialog-form" [formGroup]="form" class="form form--dialog" (ngSubmit)="submit()">
+        <mat-form-field appearance="outline" class="tx-field">
+          <mat-label>Tipo</mat-label>
+          <mat-select formControlName="kind" (selectionChange)="onKindChange($event.value)">
+            <mat-option value="INCOME">Receita</mat-option>
+            <mat-option value="EXPENSE">Despesa</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tx-field">
+          <mat-label>Categoria</mat-label>
+          <mat-select formControlName="categoryId">
+            @for (c of filteredCategories(); track c.id) {
+              <mat-option [value]="c.id">{{ c.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tx-field">
+          <mat-label>Valor</mat-label>
+          <span matTextPrefix class="tx-prefix">R$&nbsp;</span>
+          <input matInput type="number" step="0.01" min="0" formControlName="amount" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tx-field">
+          <mat-label>Data e hora</mat-label>
+          <input matInput type="datetime-local" formControlName="occurredAt" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tx-field tx-field--full">
+          <mat-label>Descrição</mat-label>
+          <textarea matInput rows="2" formControlName="description"></textarea>
+        </mat-form-field>
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+      </form>
+    </mat-dialog-content>
+    <mat-dialog-actions class="tx-dlg-actions" align="end">
+      <button mat-button type="button" mat-dialog-close>Cancelar</button>
+      <button mat-flat-button color="primary" type="submit" form="tx-dialog-form" [disabled]="form.invalid">
+        Guardar
+      </button>
+    </mat-dialog-actions>
+  } @else {
+    <div class="toolbar">
+      <h1>{{ title() }}</h1>
+      <a mat-button routerLink="/transactions">Cancelar</a>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form form--page">
+      <mat-form-field appearance="outline" class="tx-field">
+        <mat-label>Tipo</mat-label>
+        <mat-select formControlName="kind" (selectionChange)="onKindChange($event.value)">
+          <mat-option value="INCOME">Receita</mat-option>
+          <mat-option value="EXPENSE">Despesa</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="tx-field">
+        <mat-label>Categoria</mat-label>
+        <mat-select formControlName="categoryId">
+          @for (c of filteredCategories(); track c.id) {
+            <mat-option [value]="c.id">{{ c.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="tx-field">
+        <mat-label>Valor</mat-label>
+        <span matTextPrefix class="tx-prefix">R$&nbsp;</span>
+        <input matInput type="number" step="0.01" min="0" formControlName="amount" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="tx-field">
+        <mat-label>Data e hora</mat-label>
+        <input matInput type="datetime-local" formControlName="occurredAt" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="tx-field tx-field--full">
+        <mat-label>Descrição</mat-label>
+        <textarea matInput rows="2" formControlName="description"></textarea>
+      </mat-form-field>
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+      <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Guardar</button>
+    </form>
+  }
+}

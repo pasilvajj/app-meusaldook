@@ -1,0 +1,32 @@
+.auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(160deg, #e3f2fd 0%, #fafafa 45%, #ffffff 100%);
+}
+
+mat-card {
+  width: min(420px, 100%);
+}
+
+.full {
+  width: 100%;
+  display: block;
+}
+
+.error {
+  color: #b00020;
+  margin: 0 0 0.75rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+button[type='submit'] {
+  margin-top: 0.5rem;
+}

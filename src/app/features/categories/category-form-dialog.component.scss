@@ -1,0 +1,51 @@
+:host {
+  display: block;
+  background-color: #ffffff;
+}
+
+.cat-dlg-title {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 !important;
+  padding: 0.75rem 0.5rem 0.5rem !important;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #e8eef3;
+  background-color: #ffffff;
+}
+
+.cat-dlg-close {
+  margin-right: -0.25rem;
+}
+
+.cat-dlg-body {
+  padding: 1rem 1.15rem 0.5rem !important;
+  background-color: #ffffff;
+}
+
+.cat-field {
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+.cat-dlg-actions {
+  padding: 0.65rem 1rem 1rem !important;
+  margin: 0 !important;
+  background: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cat-save-single {
+  min-width: 7.5rem;
+  font-weight: 600;
+  border-radius: 10px !important;
+  --mdc-filled-button-container-color: #0d9488;
+  --mdc-filled-button-label-text-color: #fff;
+  --mdc-filled-button-hover-state-layer-color: rgba(255, 255, 255, 0.12);
+  --mdc-filled-button-pressed-state-layer-color: rgba(255, 255, 255, 0.18);
+  --mdc-filled-button-focus-state-layer-color: rgba(255, 255, 255, 0.12);
+  --mdc-filled-button-disabled-container-color: #cbd5e1;
+  --mdc-filled-button-disabled-label-text-color: #334155;
+}

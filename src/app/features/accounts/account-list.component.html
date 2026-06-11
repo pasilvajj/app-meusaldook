@@ -1,0 +1,96 @@
+<div class="contas-page">
+  <div class="contas-tab-body">
+        <div class="contas-toolbar">
+          <mat-form-field class="contas-search" appearance="outline" subscriptSizing="dynamic">
+            <mat-icon matIconPrefix>search</mat-icon>
+            <input
+              matInput
+              type="search"
+              placeholder="Filtrar contas"
+              [value]="filterText()"
+              (input)="onFilterInput($any($event.target).value)"
+              autocomplete="off"
+            />
+          </mat-form-field>
+          <div class="contas-toolbar-actions">
+            <mat-slide-toggle
+              class="contas-toggle"
+              [checked]="activeOnly()"
+              (change)="onActiveOnlyChange($event)"
+            >
+              Exibir apenas contas ativas
+            </mat-slide-toggle>
+            <button mat-stroked-button type="button" (click)="exportActive()">
+              <mat-icon>download</mat-icon>
+              Exportar contas ativas
+            </button>
+          </div>
+        </div>
+
+        @if (visibleGroups().length === 0) {
+          <div class="contas-empty">
+            <mat-icon>search_off</mat-icon>
+            <p>Nenhuma conta corresponde ao filtro.</p>
+          </div>
+        } @else {
+          @for (group of visibleGroups(); track group.id) {
+            <section class="contas-group" [attr.aria-labelledby]="'grp-' + group.id">
+              <h2 class="contas-group-title" [id]="'grp-' + group.id">{{ group.title }}</h2>
+              <div class="contas-card">
+                @for (acc of group.accounts; track acc.serverId) {
+                  <div class="contas-row" [class.contas-row--inactive]="!acc.active">
+                    <div class="contas-row-main">
+                      <mat-icon class="contas-row-icon">savings</mat-icon>
+                      <span class="contas-row-name">{{ acc.name }}</span>
+                    </div>
+                    <div class="contas-row-meta">
+                      <span class="contas-row-hint">Considerar saldo</span>
+                      <span
+                        class="contas-badge"
+                        [class.contas-badge--ok]="acc.active"
+                        [class.contas-badge--off]="!acc.active"
+                        >{{ acc.statusLabel }}</span
+                      >
+                    </div>
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="contas-row-menu"
+                      [matMenuTriggerFor]="accountMenu"
+                      [matMenuTriggerData]="{ acc: acc }"
+                      [attr.aria-label]="'Opções de ' + acc.name"
+                    >
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                  </div>
+                }
+              </div>
+            </section>
+          }
+        }
+  </div>
+
+  <mat-menu #accountMenu="matMenu">
+    <ng-template matMenuContent let-acc="acc">
+      <button mat-menu-item type="button" (click)="openEdit(acc)">
+        <mat-icon>edit</mat-icon>
+        <span>Editar</span>
+      </button>
+      <button mat-menu-item type="button" (click)="toggleAccountActive(acc)">
+        <mat-icon>{{ acc.active ? 'visibility_off' : 'visibility' }}</mat-icon>
+        <span>{{ acc.active ? 'Marcar como inativa' : 'Marcar como ativa' }}</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+
+  <button
+    mat-fab
+    color="primary"
+    type="button"
+    class="contas-fab"
+    (click)="addAccountFab()"
+    aria-label="Nova conta"
+  >
+    <mat-icon>add</mat-icon>
+  </button>
+</div>

@@ -1,0 +1,43 @@
+<div mat-dialog-content class="txd-wrap">
+  <div class="txd-grid">
+    <section class="txd-col">
+      <h3 class="txd-title">{{ data.title }}</h3>
+      <div class="txd-row">
+        <span class="txd-lbl">Valor previsto</span>
+        <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
+      </div>
+      <div class="txd-row">
+        <span class="txd-lbl">Valor efetivo</span>
+        <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
+      </div>
+      <div class="txd-row">
+        <span class="txd-lbl">Categoria</span>
+        <span>{{ data.tx.categoryName }}</span>
+      </div>
+      <p class="txd-meta">
+        Criado em {{ data.tx.createdAt | date: "dd 'de' MMMM 'de' y, HH:mm:ss":"":"pt-BR" }}<br />
+        ID: {{ data.tx.id }}
+      </p>
+    </section>
+
+    <section class="txd-col">
+      <div class="txd-row">
+        <span class="txd-lbl">Data prevista</span>
+        <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+      </div>
+      <div class="txd-row">
+        <span class="txd-lbl">Data efetiva</span>
+        <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+      </div>
+      <div class="txd-row">
+        <span class="txd-lbl">Conta</span>
+        <span class="txd-account"><mat-icon>account_balance_wallet</mat-icon>{{ data.tx.accountName }}</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div mat-dialog-actions class="txd-actions" align="end">
+  <button mat-button type="button" (click)="edit()">Editar lançamento</button>
+  <button mat-flat-button color="primary" type="button" (click)="close()">Fechar</button>
+</div>

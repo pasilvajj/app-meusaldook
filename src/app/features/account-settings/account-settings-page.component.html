@@ -1,0 +1,304 @@
+<div class="acct">
+  <aside class="acct-side" aria-label="Secções de configurações">
+    <div class="acct-side-avatar" aria-hidden="true">{{ userInitials() }}</div>
+
+    <nav class="acct-side-nav">
+      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'geral'" (click)="setNav('geral')">
+        Geral
+      </button>
+      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'plano'" (click)="setNav('plano')">
+        Plano e pagamentos
+      </button>
+      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'usuarios'" (click)="setNav('usuarios')">
+        Utilizadores
+      </button>
+      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'auditoria'" (click)="setNav('auditoria')">
+        Trilha de auditoria
+      </button>
+      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'notificacoes'" (click)="setNav('notificacoes')">
+        Notificações
+      </button>
+    </nav>
+
+    <mat-divider class="acct-divide" />
+
+    <nav class="acct-side-footer">
+      <button type="button" class="acct-link acct-link--sub" (click)="setNav('moeda')">
+        <span class="acct-flag" aria-hidden="true">🇧🇷</span>
+        Alterar moeda padrão
+      </button>
+      <button type="button" class="acct-link acct-link--sub acct-link--warn" (click)="setNav('resetar')">Resetar conta</button>
+      <button type="button" class="acct-link acct-link--sub acct-link--warn" (click)="setNav('inativar')">Inativar conta</button>
+    </nav>
+  </aside>
+
+  <div class="acct-main">
+    @if (activeNav() === 'geral') {
+      @if (loading()) {
+        <div class="acct-loading" aria-busy="true" aria-live="polite">
+          <mat-spinner diameter="40" />
+          <span>A carregar perfil…</span>
+        </div>
+      } @else {
+      <mat-card class="acct-card" appearance="outlined">
+        <mat-tab-group animationDuration="240ms" class="acct-tabs" dynamicHeight>
+          <mat-tab label="Informações">
+            <div class="acct-tab-pane">
+              <form [formGroup]="infoForm" class="acct-form-grid" id="acct-info-form" (ngSubmit)="saveInformation()">
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Nome</mat-label>
+                  <input matInput formControlName="fullName" autocomplete="name" />
+                  @if (infoForm.controls.fullName.errors?.['required'] && infoForm.controls.fullName.touched) {
+                    <mat-error>Indique o nome</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Sexo</mat-label>
+                  <mat-select formControlName="sexo" placeholder="Selecione">
+                    <mat-option value="M">Masculino</mat-option>
+                    <mat-option value="F">Feminino</mat-option>
+                  </mat-select>
+                  @if (infoForm.controls.sexo.errors?.['required'] && infoForm.controls.sexo.touched) {
+                    <mat-error>Selecione masculino ou feminino</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="acct-field acct-field--cpf">
+                  <mat-label>CPF</mat-label>
+                  <input matInput formControlName="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" />
+                  <button mat-button matSuffix type="button" class="acct-hint-btn" (click)="whyCpf(); $event.stopPropagation()">
+                    Por que informar?
+                  </button>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Data de nascimento</mat-label>
+                  <input matInput [matDatepicker]="dobPk" formControlName="birthDate" />
+                  <mat-datepicker-toggle matIconSuffix [for]="dobPk" />
+                  <mat-datepicker #dobPk />
+                </mat-form-field>
+              </form>
+              <div class="acct-card-actions">
+                <button mat-flat-button type="submit" form="acct-info-form" color="primary" class="acct-save-blue">Salvar alterações</button>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Endereço">
+            <div class="acct-tab-pane">
+              <form [formGroup]="addressForm" class="acct-form-grid" id="acct-addr-form" (ngSubmit)="saveAddress()">
+                <mat-form-field appearance="outline" class="acct-field acct-span-2">
+                  <mat-label>Morada / Rua</mat-label>
+                  <input matInput formControlName="street" autocomplete="street-address" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Número</mat-label>
+                  <input matInput formControlName="number" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Complemento</mat-label>
+                  <input matInput formControlName="complement" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>CEP</mat-label>
+                  <input matInput formControlName="postalCode" autocomplete="postal-code" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Cidade</mat-label>
+                  <input matInput formControlName="city" autocomplete="address-level2" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Estado (UF)</mat-label>
+                  <input matInput formControlName="state" maxlength="2" autocomplete="address-level1" placeholder="RJ" />
+                </mat-form-field>
+              </form>
+              <div class="acct-card-actions">
+                <button mat-flat-button type="submit" color="primary" form="acct-addr-form" class="acct-save-blue">Salvar alterações</button>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Contacto">
+            <div class="acct-tab-pane">
+              <form [formGroup]="contactForm" id="acct-contact-form" class="acct-form-stack" (ngSubmit)="saveContact()">
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>E-mail</mat-label>
+                  <input matInput [value]="auth.userEmail() ?? ''" disabled />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Telemóvel / telefone</mat-label>
+                  <input matInput formControlName="phone" autocomplete="tel" />
+                </mat-form-field>
+              </form>
+              <div class="acct-card-actions">
+                <button mat-flat-button type="submit" color="primary" form="acct-contact-form" class="acct-save-blue">Salvar alterações</button>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card>
+      }
+    } @else if (activeNav() === 'plano') {
+      <div class="acct-plan-stack">
+        <mat-card class="acct-card acct-plan-card" appearance="outlined">
+          <div class="acct-plan-grid">
+            <section class="acct-plan-col acct-plan-col--left">
+              <h2>Detalhes da assinatura</h2>
+              <div class="acct-plan-rows">
+                <div class="acct-plan-row"><span>Plano</span><strong>Individual</strong></div>
+                <div class="acct-plan-row"><span>Módulo financeiro</span><strong>Habilitado</strong></div>
+                <div class="acct-plan-row acct-plan-row--sub"><span>Quantidade de lançamentos</span><strong>1000/mês</strong></div>
+                <div class="acct-plan-row"><span>Módulo de investimentos</span><strong>Não habilitado</strong></div>
+                <div class="acct-plan-row"><span>Extras</span><strong></strong></div>
+                <div class="acct-plan-row acct-plan-row--sub"><span>Usuários adicionais</span><strong>3</strong></div>
+                <div class="acct-plan-row acct-plan-row--sub"><span>Quantidade de anexos</span><strong>100MB/mês</strong></div>
+                <div class="acct-plan-row acct-plan-row--sub"><span>Contas em moeda estrangeira</span><strong>3</strong></div>
+                <div class="acct-plan-row acct-plan-row--sub"><span>Conexões bancárias</span><strong>5</strong></div>
+              </div>
+            </section>
+
+            <section class="acct-plan-col acct-plan-col--right">
+              <div class="acct-plan-ring" [style.--pct]="planRingPercent() + '%'"></div>
+              <p>Restam {{ planDaysRemaining() }} dias (expira em {{ planExpiryLabel() }})</p>
+              <button mat-flat-button color="primary" type="button" (click)="renewPlan()">Renovar ou alterar plano</button>
+            </section>
+          </div>
+        </mat-card>
+
+        <mat-card class="acct-card acct-plan-history" appearance="outlined">
+          <h3>Histórico de pagamentos</h3>
+          <p>Nenhum pagamento realizado</p>
+        </mat-card>
+      </div>
+    } @else if (activeNav() === 'assinatura') {
+      <div class="acct-subscribe-grid">
+        <mat-card class="acct-card acct-subscribe-left" appearance="outlined">
+          <a class="acct-back-link" href="javascript:void(0)" (click)="setNav('plano'); $event.preventDefault()">← Voltar</a>
+          <section class="acct-subscribe-block">
+            <h3>Contratar módulos</h3>
+            <label class="acct-radio-line">
+              <input type="radio" checked />
+              <span>Apenas Financeiro</span>
+            </label>
+          </section>
+
+          <section class="acct-subscribe-block">
+            <h3>Escolher período</h3>
+            <label class="acct-radio-line">
+              <input type="radio" name="period" [checked]="selectedPeriod() === 'ANUAL'" (change)="choosePeriod('ANUAL')" />
+              <span>Anual</span>
+              <em class="acct-off-pill">30% off</em>
+            </label>
+            <label class="acct-radio-line">
+              <input type="radio" name="period" [checked]="selectedPeriod() === 'SEMESTRAL'" (change)="choosePeriod('SEMESTRAL')" />
+              <span>Semestral</span>
+            </label>
+            <label class="acct-radio-line">
+              <input type="radio" name="period" [checked]="selectedPeriod() === 'TRIMESTRAL'" (change)="choosePeriod('TRIMESTRAL')" />
+              <span>Trimestral</span>
+            </label>
+          </section>
+
+          <div class="acct-subscribe-total">
+            <span>Total do plano</span>
+            <strong>R$ {{ planTotalPrice() | number: '1.2-2':'pt-BR' }}</strong>
+            <small>*Se você possuir um cupom de desconto, poderá utilizá-lo na próxima etapa.</small>
+          </div>
+        </mat-card>
+
+        <mat-card class="acct-card acct-subscribe-right" appearance="outlined">
+          <section class="acct-pay-block">
+            <h3>Modo de pagamento</h3>
+            <div class="acct-pay-methods">
+              <label class="acct-pay-row">
+                <input type="radio" name="payment" [checked]="selectedPaymentMode() === 'PIX'" (change)="choosePaymentMode('PIX')" />
+                <span>PIX</span>
+              </label>
+              <label class="acct-pay-row">
+                <input
+                  type="radio"
+                  name="payment"
+                  [checked]="selectedPaymentMode() === 'CARTAO'"
+                  (change)="choosePaymentMode('CARTAO')"
+                />
+                <span>Cartão de crédito</span>
+              </label>
+              <label class="acct-pay-row">
+                <input
+                  type="radio"
+                  name="payment"
+                  [checked]="selectedPaymentMode() === 'BOLETO'"
+                  (change)="choosePaymentMode('BOLETO')"
+                />
+                <span>Boleto bancário</span>
+              </label>
+            </div>
+
+            @if (selectedPaymentMode() === 'CARTAO') {
+              <div class="acct-card-form">
+                <mat-form-field appearance="outline" class="acct-field acct-field--readonly-value">
+                  <mat-label>Valor</mat-label>
+                  <input matInput [value]="'R$ ' + (planTotalPrice() | number: '1.2-2':'pt-BR')" readonly />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Número do Cartão</mat-label>
+                  <input matInput placeholder="____ ____ ____ ____" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Nome do Titular</mat-label>
+                  <input matInput placeholder="Nome do Titular" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>CPF do Titular</mat-label>
+                  <input matInput placeholder="CPF do Titular" />
+                </mat-form-field>
+
+                <div class="acct-card-form-row">
+                  <mat-form-field appearance="outline" class="acct-field">
+                    <mat-label>Vencimento</mat-label>
+                    <input matInput placeholder="DD/AAAA" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="acct-field acct-field--cvv">
+                    <mat-label>CVV</mat-label>
+                    <input matInput placeholder="***" />
+                  </mat-form-field>
+                </div>
+
+                <mat-form-field appearance="outline" class="acct-field">
+                  <mat-label>Parcelamento</mat-label>
+                  <mat-select
+                    [value]="selectedInstallment()"
+                    (selectionChange)="chooseInstallment($event.value)"
+                  >
+                    @for (option of installmentOptions(); track option.count) {
+                      <mat-option [value]="option.count">
+                        {{ option.count }}x de R$ {{ option.amount | number: '1.2-2':'pt-BR' }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            } @else if (selectedPaymentMode() === 'PIX') {
+              <div class="acct-pay-note">Pagamento instantâneo via PIX. Valor total: R$ {{ planTotalPrice() | number: '1.2-2':'pt-BR' }}.</div>
+            } @else {
+              <div class="acct-pay-note">
+                Boleto bancário com vencimento em até 2 dias úteis. Valor total: R$ {{ planTotalPrice() | number: '1.2-2':'pt-BR' }}.
+              </div>
+            }
+          </section>
+        </mat-card>
+      </div>
+    } @else if (isPlaceholderSection()) {
+      <mat-card class="acct-card acct-placeholder" appearance="outlined">
+        <mat-icon aria-hidden="true">construction</mat-icon>
+        <h2>{{ placeholderTitle() }}</h2>
+        <p>Esta área ficará disponível numa atualização próxima.</p>
+      </mat-card>
+    }
+  </div>
+</div>

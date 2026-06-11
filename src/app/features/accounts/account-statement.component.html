@@ -1,0 +1,210 @@
+<div class="st-screen">
+@if (loading()) {
+  <div class="st-loading">
+    <mat-spinner diameter="40" />
+    <span>A carregar extrato…</span>
+  </div>
+} @else {
+  <div class="st-layout">
+    <aside class="st-col st-col--side">
+      <mat-card class="st-card" appearance="outlined">
+        <mat-card-content class="st-account-bar">
+          <mat-icon class="st-account-ico">account_balance</mat-icon>
+          <div class="st-account-text">
+            <span class="st-account-label">Conta</span>
+            <span class="st-account-name">{{ accountLabel() }}</span>
+          </div>
+          <button
+            mat-icon-button
+            type="button"
+            (click)="editAccount()"
+            aria-label="Editar conta"
+            matTooltip="Editar conta"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+          <a mat-icon-button routerLink="/contas" aria-label="Lista de contas" matTooltip="Lista de contas">
+            <mat-icon>account_balance_wallet</mat-icon>
+          </a>
+        </mat-card-content>
+        <mat-divider />
+        <mat-card-content class="st-date-bar">
+          <button mat-icon-button type="button" (click)="shiftMonth(-1)" aria-label="Mês anterior">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <div class="st-date-center">
+            <span class="st-date-title">{{ monthNavLabel() }}</span>
+            <div class="st-date-actions">
+              <button mat-icon-button type="button" (click)="goTodayMonth()" aria-label="Ir para o mês actual" matTooltip="Mês actual">
+                <mat-icon>calendar_today</mat-icon>
+              </button>
+              <button mat-icon-button type="button" aria-label="Configurações" matTooltip="Em breve" (click)="filterSoon()">
+                <mat-icon>settings</mat-icon>
+              </button>
+            </div>
+          </div>
+          <button mat-icon-button type="button" (click)="shiftMonth(1)" aria-label="Próximo mês">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="st-card st-card--sit" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Situação confirmada/projetada (R$)</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="st-situation">
+          <div class="st-sit-head">
+            <span></span>
+            <span class="num">Confirmado</span>
+            <span class="num">Projetado</span>
+          </div>
+          @for (row of situationRows(); track row.label) {
+            <div class="st-sit-row">
+              <span class="st-sit-label">{{ row.label }}</span>
+              <span class="num" [class]="toneClass(row.tone)">{{ row.confirmed | number: '1.2-2' }}</span>
+              <span class="num" [class]="toneClass(row.tone)">{{ row.projected | number: '1.2-2' }}</span>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </aside>
+
+    <section class="st-col st-col--main">
+      <mat-card class="st-card st-card--list" appearance="outlined">
+        <mat-card-content class="st-toolbar">
+          <button mat-stroked-button type="button" class="st-filter-btn" (click)="filterSoon()">Filtrar</button>
+          <div class="st-legend" aria-hidden="true">
+            <span class="st-legend-item"><i class="st-dot st-dot--pend"></i> Pendentes</span>
+            <span class="st-legend-item"><i class="st-dot st-dot--sched"></i> Agendados</span>
+            <span class="st-legend-item"><i class="st-dot st-dot--ok"></i> Confirmados</span>
+            <span class="st-legend-item"><i class="st-dot st-dot--rec"></i> Conciliados</span>
+          </div>
+          <div class="st-toolbar-icons">
+            <button mat-icon-button type="button" matTooltip="Em breve" disabled aria-label="Pastas"><mat-icon>folder</mat-icon></button>
+            <button mat-icon-button type="button" (click)="filterSoon()" aria-label="Definições" matTooltip="Definições"><mat-icon>settings</mat-icon></button>
+            <button mat-icon-button type="button" matTooltip="Ecrã completo" aria-label="Ecrã completo" disabled><mat-icon>fullscreen</mat-icon></button>
+            <button mat-icon-button type="button" (click)="exportCsv()" aria-label="Exportar" matTooltip="Exportar CSV"><mat-icon>download</mat-icon></button>
+            <button
+              mat-icon-button
+              type="button"
+              (click)="printView()"
+              [disabled]="printing() || loading()"
+              aria-label="Imprimir relatório"
+              matTooltip="Imprimir relatório"
+            >
+              <mat-icon>print</mat-icon>
+            </button>
+          </div>
+        </mat-card-content>
+        <mat-divider />
+        <mat-card-content class="st-list">
+          <div class="st-row st-row--subhead">
+            <span class="st-cell st-cell--dot"></span>
+            <span class="st-cell st-cell--day">{{ monthStartDdMm() }}</span>
+            <span class="st-cell st-cell--desc st-muted">Saldo anterior</span>
+            <span class="st-cell st-cell--chk"></span>
+            <span class="st-cell st-cell--amt"></span>
+            <span class="st-cell st-cell--run num">0,00</span>
+          </div>
+          @for (line of statementLines(); track line.kind === 'opening' ? 'opening-' + line.sortKey : line.tx.id) {
+            <div class="st-row" [class.st-row--opening]="line.kind === 'opening'">
+              <span class="st-cell st-cell--dot">
+                @if (line.kind === 'opening') {
+                  <i class="st-dot st-dot--rec" aria-hidden="true"></i>
+                } @else {
+                  <i class="st-dot st-dot--ok" aria-hidden="true"></i>
+                }
+              </span>
+              <span class="st-cell st-cell--day">{{ line.dateLabel }}</span>
+              <span class="st-cell st-cell--desc">
+                @if (line.kind === 'tx') {
+                  <span class="st-desc-stack">
+                    <button type="button" class="st-desc-link" (click)="openDetails(line.tx); $event.stopPropagation()">
+                      {{ primaryDescription(line.tx) ?? line.desc }}
+                    </button>
+                    <span class="st-chip-row">
+                      <span class="st-chip">{{ line.tx.accountName }}</span>
+                      <span class="st-chip">{{ line.tx.categoryName }}</span>
+                    </span>
+                  </span>
+                } @else {
+                  {{ line.desc }}
+                }
+              </span>
+              <span class="st-cell st-cell--chk"><mat-icon class="st-check">check</mat-icon></span>
+              <span class="st-cell st-cell--amt num" [class]="amountClass(line.delta)">
+                {{ line.delta | number: '1.2-2' }}
+              </span>
+              <span class="st-cell st-cell--run num" [class]="line.run < 0 ? 'st-num--neg' : 'st-num--pos'">
+                {{ line.run | number: '1.2-2' }}
+              </span>
+            </div>
+          } @empty {
+            <p class="st-empty">Sem movimentos neste mês.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </section>
+  </div>
+}
+</div>
+
+<div class="st-print" aria-hidden="true">
+  <header class="st-print-header">
+    <div>
+      <p class="st-print-eyebrow">Extrato de conta</p>
+      <h1 class="st-print-title">{{ accountLabel() }}</h1>
+      <p class="st-print-meta">
+        {{ monthNavLabel() }}
+        @if (printedAt(); as at) {
+          · Gerado em {{ at | date: 'dd/MM/yyyy HH:mm':'':'pt-BR' }}
+        }
+      </p>
+    </div>
+  </header>
+
+  <table class="st-print-table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Lançamento</th>
+        <th class="st-print-num">Valor (R$)</th>
+        <th class="st-print-num">Saldo (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="st-print-subhead">
+        <td>{{ monthStartDdMm() }}</td>
+        <td>Saldo anterior</td>
+        <td class="st-print-num">—</td>
+        <td class="st-print-num">0,00</td>
+      </tr>
+      @for (line of printLines(); track line.kind === 'opening' ? 'opening-' + line.sortKey : line.tx.id) {
+        <tr>
+          <td>{{ printDateLabel(line) }}</td>
+          <td>{{ printDescription(line) }}</td>
+          <td class="st-print-num" [class.st-print-neg]="line.delta < 0" [class.st-print-pos]="line.delta > 0">
+            {{ line.delta | number: '1.2-2':'pt-BR' }}
+          </td>
+          <td class="st-print-num" [class.st-print-neg]="line.run < 0" [class.st-print-pos]="line.run >= 0">
+            {{ line.run | number: '1.2-2':'pt-BR' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <footer class="st-print-footer">
+    <div class="st-print-summary">
+      <span>Receitas: R$ {{ printSituation().receitas | number: '1.2-2':'pt-BR' }}</span>
+      <span>Despesas: R$ {{ printSituation().despesas | number: '1.2-2':'pt-BR' }}</span>
+      <strong [class.st-print-neg]="printSituation().resultado < 0">
+        Resultado: R$ {{ printSituation().resultado | number: '1.2-2':'pt-BR' }}
+      </strong>
+      <strong [class.st-print-neg]="printSituation().saldoFinal < 0">
+        Saldo final: R$ {{ printSituation().saldoFinal | number: '1.2-2':'pt-BR' }}
+      </strong>
+    </div>
+  </footer>
+</div>

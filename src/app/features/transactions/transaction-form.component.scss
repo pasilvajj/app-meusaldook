@@ -1,0 +1,245 @@
+@use './transaction-list.component.scss';
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 520px;
+}
+
+.form--dialog {
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.tx-field {
+  width: 100%;
+}
+
+.tx-prefix {
+  font-weight: 600;
+  color: #0f172a;
+  margin-right: 0.15rem;
+}
+
+.tx-field--amount .mat-mdc-input-element {
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.full {
+  width: 100%;
+}
+
+.error {
+  color: #b00020;
+  margin: 0;
+}
+
+.center--dialog {
+  padding: 2rem 1.5rem;
+}
+
+.tx-dlg-title {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 !important;
+  padding: 1rem 1rem 0.5rem !important;
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-family: 'DM Sans', Roboto, 'Helvetica Neue', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.tx-dlg-title-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-dlg-close {
+  flex-shrink: 0;
+  margin: -0.25rem -0.35rem -0.25rem 0;
+  color: #64748b;
+}
+
+.tx-dlg-content {
+  padding: 0.75rem 1.25rem 1.25rem !important;
+  margin: 0 !important;
+  max-height: min(70vh, 560px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.tx-dlg-actions--expense {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between !important;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 !important;
+  padding: 0.85rem 1.15rem 1rem !important;
+  background: #f4f7fb;
+  border-top: 1px solid #e8eef3;
+}
+
+.tx-dlg-title--expense {
+  align-items: center !important;
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f6;
+  padding: 1rem 1.15rem 0.85rem !important;
+}
+
+.tx-dlg-content--expense {
+  max-height: min(72vh, 620px);
+  background: #ffffff;
+  padding: 1rem 1.25rem 1.35rem !important;
+}
+
+.tx-dlg-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tx-foot-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #94a3b8;
+}
+
+.tx-foot-icon--on {
+  background: #0d9488;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+}
+
+.tx-foot-icon--on mat-icon {
+  color: #fff;
+}
+
+.tx-save-group {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.3);
+}
+
+.tx-save-main {
+  border-radius: 0 !important;
+  min-width: 6.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tx-save-plus {
+  border-radius: 0 !important;
+  min-width: 3rem;
+  padding: 0 !important;
+}
+
+.tx-save-main.mat-mdc-unelevated-button,
+.tx-save-plus.mat-mdc-unelevated-button {
+  box-shadow: none !important;
+}
+
+.form--expense {
+  gap: 0;
+  max-width: 100%;
+}
+
+.tx-exp-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.tx-exp-row {
+  display: grid;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.tx-exp-row--3 {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.tx-personalize-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding-bottom: 1.28rem;
+  min-height: 3.5rem;
+}
+
+.tx-personalize-wrap--full {
+  justify-content: flex-start;
+  padding-bottom: 0.35rem;
+  min-height: 0;
+}
+
+.tx-personalize-btn {
+  color: #0d9488;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.tx-personalize-btn mat-icon {
+  margin-right: 0.2rem;
+  font-size: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  vertical-align: middle;
+}
+
+.tx-exp-row--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .tx-exp-row--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .tx-exp-row--2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tx-title-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-family: 'DM Sans', Roboto, 'Helvetica Neue', sans-serif;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.tx-title-menu:hover {
+  background: rgba(13, 148, 136, 0.08);
+}
+
+.tx-title-chevron {
+  color: #64748b;
+}

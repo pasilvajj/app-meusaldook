@@ -1,0 +1,354 @@
+@if (loading()) {
+  <div class="dash-loading">
+    <mat-spinner diameter="44" />
+    <span>A carregar a tua visão geral…</span>
+  </div>
+} @else {
+  @if (data(); as d) {
+  <div class="overview">
+      <div class="bento">
+      <mat-card class="widget widget--wide" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Saldos de caixa</mat-card-title>
+          <mat-card-subtitle>Confirmado vs. projetado (mês corrente)</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <table mat-table [dataSource]="balanceRows()" class="dense-table">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Conta</th>
+              <td mat-cell *matCellDef="let row">
+                <a class="dash-account-link" [routerLink]="['/contas', 'extrato', row.accountKey]">{{ row.name }}</a>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="confirmed">
+              <th mat-header-cell *matHeaderCellDef class="num">Confirmado</th>
+              <td mat-cell *matCellDef="let row" class="num" [class.negative]="row.confirmed < 0">
+                R$ {{ row.confirmed | number: '1.2-2' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="projected">
+              <th mat-header-cell *matHeaderCellDef class="num">Projetado</th>
+              <td mat-cell *matCellDef="let row" class="num" [class.negative]="row.projected < 0">
+                R$ {{ row.projected | number: '1.2-2' }}
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedBalanceColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedBalanceColumns"></tr>
+          </table>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="widget widget--chart widget--flux" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Fluxo de caixa</mat-card-title>
+          <mat-card-subtitle>Saldo acumulado ao longo do mês</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="flux-card-body">
+          <div class="chart-wrap chart-wrap--flux">
+            <canvas #lineCanvas height="128" aria-label="Gráfico de fluxo de caixa"></canvas>
+          </div>
+          @if (fluxoResumo(); as fx) {
+            <div class="flux-foot">
+              <div class="flux-foot-head">
+                <span class="flux-foot-ref">{{ fx.saldoEmLabel }}</span>
+              </div>
+              <div class="flux-rows">
+                <div class="flux-row">
+                  <mat-checkbox class="flux-cb" [checked]="true" disabled aria-hidden="true"></mat-checkbox>
+                  <span class="flux-dot flux-dot--acc" aria-hidden="true"></span>
+                  <span class="flux-name">{{ fx.accountName }}</span>
+                  <span class="flux-val flux-val--pos">R$ {{ fx.accountEnd | number: '1.2-2' }}</span>
+                </div>
+                <div class="flux-row">
+                  <mat-checkbox class="flux-cb" [checked]="true" disabled aria-hidden="true"></mat-checkbox>
+                  <span class="flux-dot flux-dot--goal" aria-hidden="true"></span>
+                  <span class="flux-name">Saldo de resíduo de metas</span>
+                  <span class="flux-val" [class.flux-val--neg]="fx.goalResidue < 0" [class.flux-val--pos]="fx.goalResidue > 0">
+                    R$ {{ fx.goalResidue | number: '1.2-2' }}
+                  </span>
+                </div>
+              </div>
+              <mat-divider class="flux-divider" />
+              <div class="flux-total-row">
+                <span class="flux-total-label">Total</span>
+                <strong class="flux-total-val" [class.flux-val--neg]="fx.total < 0" [class.flux-val--pos]="fx.total >= 0">
+                  R$ {{ fx.total | number: '1.2-2' }}
+                </strong>
+              </div>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="widget widget--apagar" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title class="ap-title">Contas a pagar</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="ap-body" [class.ap-body--filled]="contasAPagar().length > 0">
+          @if (contasAPagar().length === 0) {
+            <div class="ap-empty">
+              <mat-icon class="ap-empty-icon" aria-hidden="true">thumb_up</mat-icon>
+              <p class="ap-empty-primary">Nenhuma conta a pagar.</p>
+              <p class="ap-empty-secondary">Contas a pagar são despesas agendadas e ainda não pagas.</p>
+              <div class="ap-actions">
+                <button mat-flat-button type="button" class="ap-btn-mint" (click)="openNewTransactionModal()">Incluir despesa</button>
+                <a class="ap-link-mint" routerLink="/transactions" aria-label="Ver movimentações">Ver movimentações</a>
+              </div>
+            </div>
+          } @else {
+            <div class="ap-filled">
+              <ul class="ap-list ap-list--filled" aria-label="Despesas agendadas">
+                @for (tx of contasAPagar(); track tx.id) {
+                  <li class="ap-row ap-row--data">
+                    <span class="ap-row-dot" aria-hidden="true"></span>
+                    <span class="ap-row-date ap-row-date--strong">{{ tx.occurredAt | date: 'dd/MM/yy':'':'pt-BR' }}</span>
+                    <div class="ap-row-mid">
+                      <span class="ap-pill">{{ tx.accountName }}</span>
+                      @if (tx.description && tx.description.trim()) {
+                        <span class="ap-row-cat">{{ tx.description.trim() }}</span>
+                      } @else if (tx.categoryName) {
+                        <span class="ap-row-cat">{{ tx.categoryName }}</span>
+                      }
+                    </div>
+                    <span class="ap-row-amt">-{{ tx.amount | number: '1.2-2':'pt-BR' }}</span>
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="ap-row-menu"
+                      [matMenuTriggerFor]="apPayMenu"
+                      [matMenuTriggerData]="{ row: tx }"
+                      aria-label="Ações"
+                    >
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                  </li>
+                }
+              </ul>
+              <footer class="ap-footer">
+                <span class="ap-footer-lbl">Total</span>
+                <strong class="ap-footer-val">-R$ {{ contasAPagarTotal() | number: '1.2-2':'pt-BR' }}</strong>
+              </footer>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="widget widget--receber" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title class="ar-title">Contas a receber</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="ar-body" [class.ar-body--filled]="contasAReceber().length > 0">
+          @if (contasAReceber().length === 0) {
+            <div class="ar-empty">
+              <mat-icon class="ar-empty-icon" aria-hidden="true">savings</mat-icon>
+              <p class="ar-empty-primary">Nenhuma conta a receber.</p>
+              <p class="ar-empty-secondary">Contas a receber são receitas agendadas com data futura (ainda não confirmadas no caixa).</p>
+              <div class="ar-actions">
+                <button mat-flat-button type="button" class="ar-btn-teal" (click)="openNewIncomeModal()">Incluir receita</button>
+                <a class="ar-link-teal" routerLink="/transactions" aria-label="Ver movimentações">Ver movimentações</a>
+              </div>
+            </div>
+          } @else {
+            <div class="ar-filled">
+              <ul class="ar-list ar-list--filled" aria-label="Receitas agendadas">
+                @for (tx of contasAReceber(); track tx.id) {
+                  <li class="ar-row ar-row--data">
+                    <span class="ar-row-dot" aria-hidden="true"></span>
+                    <span class="ar-row-date ar-row-date--strong">{{ tx.occurredAt | date: 'dd/MM/yy':'':'pt-BR' }}</span>
+                    <div class="ar-row-mid">
+                      <span class="ar-pill">{{ tx.accountName }}</span>
+                      @if (tx.description && tx.description.trim()) {
+                        <span class="ar-row-cat">{{ tx.description.trim() }}</span>
+                      } @else if (tx.categoryName) {
+                        <span class="ar-row-cat">{{ tx.categoryName }}</span>
+                      }
+                    </div>
+                    <span class="ar-row-amt">+{{ tx.amount | number: '1.2-2':'pt-BR' }}</span>
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="ar-row-menu"
+                      [matMenuTriggerFor]="arReceiveMenu"
+                      [matMenuTriggerData]="{ row: tx }"
+                      aria-label="Ações"
+                    >
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                  </li>
+                }
+              </ul>
+              <footer class="ar-footer">
+                <span class="ar-footer-lbl">Total</span>
+                <strong class="ar-footer-val">+R$ {{ contasAReceberTotal() | number: '1.2-2':'pt-BR' }}</strong>
+              </footer>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+       <mat-card class="widget widget--donut" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Despesas por categoria</mat-card-title>
+          <mat-card-subtitle>Distribuição no mês</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="donut-card-content">
+          <div class="donut-layout">
+            <div class="donut-chart-cell">
+              <div class="chart-wrap chart-wrap--donut">
+                <canvas #donutCanvas height="240" aria-label="Gráfico de despesas por categoria"></canvas>
+              </div>
+            </div>
+            <div class="donut-legend-cell">
+              <ul class="legend">
+                @for (row of donutCategories(d); track row.categoryName) {
+                  <li>
+                    <span class="dot" [style.background]="legendColor($index)"></span>
+                    <span class="legend-name">{{ row.categoryName }}</span>
+                    <span class="legend-pct">{{ categorySharePct(d, row) }}%</span>
+                    <span class="legend-val" [class.negative]="row.total < 0">R$ {{ formatDonutBrl(row.total) }}</span>
+                  </li>
+                } @empty {
+                  <li class="legend-empty">Sem despesas categorizadas neste mês.</li>
+                }
+              </ul>
+            </div>
+            @if (donutCategories(d).length > 0) {
+              <aside class="donut-total-aside" aria-label="Total das despesas por categoria">
+                <div class="donut-total-stack">
+                  <span class="donut-total-rule" aria-hidden="true"></span>
+                  <span class="donut-total-label">Total</span>
+                  <strong class="donut-total-amount" [class.negative]="donutCategoriesTotal(d) < 0">
+                    R$ {{ formatDonutBrl(donutCategoriesTotal(d)) }}
+                  </strong>
+                </div>
+              </aside>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="widget widget--chart" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Resultado do mês</mat-card-title>
+          <mat-card-subtitle>Receitas vs. despesas</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-wrap chart-wrap--bar">
+            <canvas #barCanvas height="200" aria-label="Gráfico de resultado do mês"></canvas>
+          </div>
+          <div class="result-strip">
+            <div>
+              <span class="rs-label">Receitas</span>
+              <strong class="rs-pos">R$ {{ incomeTotal(d) | number: '1.2-2' }}</strong>
+            </div>
+            <div>
+              <span class="rs-label">Despesas</span>
+              <strong class="rs-neg">R$ {{ expenseTotal(d) | number: '1.2-2' }}</strong>
+            </div>
+            <div>
+              <span class="rs-label">Resultado</span>
+              <strong [class.rs-pos]="netTotal(d) >= 0" [class.rs-neg]="netTotal(d) < 0">
+                R$ {{ netTotal(d) | number: '1.2-2' }}
+              </strong>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="widget widget--chart widget--metas-card" appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Metas de despesas</mat-card-title>
+          <mat-card-subtitle class="metas-card-sub">
+            @if (metasDespesaRows().length > 0) {
+              Situação confirmada
+            } @else {
+              Situação projetada
+            }
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="metas-card-body">
+          @if (metasDespesaRows().length > 0 && metasDespesaTotals(); as tot) {
+            <div class="metas-table-wrap">
+              <div class="metas-grid metas-grid--head">
+                <span class="metas-h metas-h--cat">Categoria</span>
+                <span class="metas-h metas-h--bar"></span>
+                <span class="metas-h metas-h--num">Meta</span>
+                <span class="metas-h metas-h--num">Realizado</span>
+                <span class="metas-h metas-h--num">A realizar</span>
+              </div>
+              @for (row of metasDespesaRows(); track row.categoryName) {
+                <div class="metas-grid metas-grid--row">
+                  <span class="metas-cat">{{ row.categoryName }}</span>
+                  <div class="metas-bar-cell">
+                    <div
+                      class="metas-bar-track"
+                      role="img"
+                      [attr.aria-label]="'Progresso da meta: ' + (row.pct | number: '1.2-2') + ' por cento'"
+                    >
+                      <span class="metas-bar-fill" [ngClass]="row.barClass" [style.width.%]="row.pctBar"></span>
+                      <span class="metas-bar-label">{{ row.pct | number: '1.2-2' }}%</span>
+                    </div>
+                  </div>
+                  <span class="metas-num">R$ {{ row.meta | number: '1.2-2' }}</span>
+                  <span class="metas-num">R$ {{ row.realizado | number: '1.2-2' }}</span>
+                  <span class="metas-num">R$ {{ row.aRealizar | number: '1.2-2' }}</span>
+                </div>
+              }
+              <div class="metas-foot">
+                <div class="metas-grid metas-grid--row metas-grid--total">
+                  <span class="metas-cat metas-total-lbl">Total</span>
+                  <div class="metas-bar-cell">
+                    <div class="metas-bar-track" role="img" [attr.aria-label]="'Total: ' + (tot.pct | number: '1.2-2') + ' por cento'">
+                      <span class="metas-bar-fill" [ngClass]="tot.barClass" [style.width.%]="tot.pctBar"></span>
+                      <span class="metas-bar-label">{{ tot.pct | number: '1.2-2' }}%</span>
+                    </div>
+                  </div>
+                  <span class="metas-num metas-num--strong">R$ {{ tot.meta | number: '1.2-2' }}</span>
+                  <span class="metas-num metas-num--strong">R$ {{ tot.realizado | number: '1.2-2' }}</span>
+                  <span class="metas-num metas-num--strong">R$ {{ tot.aRealizar | number: '1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+            <a mat-button class="metas-manage-link metas-manage-link--inline" routerLink="/metas">Gerenciar metas</a>
+          } @else {
+            <div class="metas-empty" role="status">
+              <div class="metas-empty-icon-wrap" aria-hidden="true">
+                <mat-icon class="metas-empty-icon">priority_high</mat-icon>
+              </div>
+              <p class="metas-empty-title">Sem metas de despesa definidas para {{ metasMesNome() }}.</p>
+              <p class="metas-empty-desc">Defina uma meta para o valor máximo que espera gastar.</p>
+              <a mat-button class="metas-manage-link" routerLink="/metas">Gerenciar metas</a>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-menu #apPayMenu="matMenu">
+      <ng-template matMenuContent let-row="row">
+        <button mat-menu-item type="button" (click)="editPayable(row)">
+          <mat-icon>edit</mat-icon>
+          <span>Editar</span>
+        </button>
+        <button mat-menu-item type="button" (click)="removePayable(row)">
+          <mat-icon color="warn">delete_outline</mat-icon>
+          <span>Eliminar</span>
+        </button>
+      </ng-template>
+    </mat-menu>
+
+    <mat-menu #arReceiveMenu="matMenu">
+      <ng-template matMenuContent let-row="row">
+        <button mat-menu-item type="button" (click)="editReceivable(row)">
+          <mat-icon>edit</mat-icon>
+          <span>Editar</span>
+        </button>
+        <button mat-menu-item type="button" (click)="removeReceivable(row)">
+          <mat-icon color="warn">delete_outline</mat-icon>
+          <span>Eliminar</span>
+        </button>
+      </ng-template>
+    </mat-menu>
+  </div>
+  }
+}

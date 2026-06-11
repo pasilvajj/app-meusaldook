@@ -1,0 +1,509 @@
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.cdk-overlay-container {
+  z-index: 1100;
+}
+
+.define-goals-dialog-backdrop.cdk-overlay-dark-backdrop,
+.cdk-overlay-backdrop.define-goals-dialog-backdrop {
+  background: rgba(15, 23, 42, 0.36) !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.define-goals-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 12px;
+  --mat-dialog-container-color: #ffffff;
+  padding: 0;
+  overflow: visible;
+  background: #ffffff;
+}
+
+.define-goals-dialog-panel .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 720px);
+  background-color: #ffffff;
+  background: #ffffff;
+  box-shadow:
+    0 25px 60px -12px rgba(15, 23, 42, 0.28),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.define-goals-dialog-panel .mat-mdc-dialog-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.define-goals-dialog-panel .dlg-footer .mat-mdc-unelevated-button.mat-primary {
+  --mdc-filled-button-container-color: #0d9488;
+  --mdc-filled-button-label-text-color: #fff;
+}
+
+.transaction-form-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 12px;
+  padding: 0;
+  overflow: visible;
+}
+
+.transaction-form-dialog-panel .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 640px);
+}
+
+.transaction-form-dialog-panel .mat-mdc-dialog-content {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.transaction-form-dialog-panel app-transaction-form {
+  display: block;
+  width: 100%;
+  font-family: 'DM Sans', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.transaction-form-dialog-panel .tx-dlg-actions .mat-mdc-unelevated-button.mat-primary {
+  --mdc-filled-button-container-color: #0d9488;
+  --mdc-filled-button-label-text-color: #fff;
+}
+
+.transaction-form-dialog-panel .tx-save-btn.mat-mdc-unelevated-button.mat-primary {
+  --mdc-filled-button-container-color: #0d9488;
+  --mdc-filled-button-label-text-color: #fff;
+  border-radius: 999px;
+  padding-inline: 1.25rem;
+}
+
+.transaction-form-dialog-panel--wide .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  max-width: min(96vw, 520px);
+  background: #ffffff;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  border-radius: 14px;
+}
+
+.transaction-form-dialog-panel--wide app-transaction-form {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Desfoque suave no fundo (referência) */
+.transaction-form-dialog-backdrop.cdk-overlay-dark-backdrop {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Campos “Nova despesa”: bordas claras, foco turquesa, menos aspeto “cinzento” */
+.transaction-form-dialog-panel--wide app-transaction-form .form--expense {
+  --mdc-outlined-text-field-container-shape: 10px;
+  --mdc-outlined-text-field-outline-width: 1px;
+  --mdc-outlined-text-field-focus-outline-width: 2px;
+  --mdc-outlined-text-field-outline-color: #e5e7eb;
+  --mdc-outlined-text-field-hover-outline-color: #d1d5db;
+  --mdc-outlined-text-field-focus-outline-color: #14b8a6;
+  --mdc-outlined-text-field-input-text-color: #0f172a;
+  --mdc-outlined-text-field-label-text-color: #64748b;
+  --mdc-outlined-text-field-caret-color: #0d9488;
+}
+
+.transaction-form-dialog-panel--wide app-transaction-form .form--expense .mat-mdc-text-field-wrapper {
+  background-color: #ffffff;
+}
+
+.transaction-form-dialog-panel--wide app-transaction-form .tx-prefix {
+  color: #0f172a;
+}
+
+.transaction-form-dialog-panel--wide
+  app-transaction-form
+  .tx-field--amount.mat-mdc-form-field.mat-form-field-invalid:not(.mat-focused) {
+  --mdc-outlined-text-field-outline-color: #db2777;
+  --mdc-outlined-text-field-hover-outline-color: #db2777;
+  --mdc-outlined-text-field-label-text-color: #be185d;
+}
+
+.transaction-form-dialog-panel--wide app-transaction-form .tx-field--amount.mat-mdc-form-field.mat-focused.mat-form-field-invalid {
+  --mdc-outlined-text-field-focus-outline-color: #db2777;
+}
+
+.transaction-form-dialog-panel--wide app-transaction-form .mat-mdc-form-field-subscript-wrapper .mat-mdc-form-field-error {
+  color: #e11d48;
+  font-size: 0.75rem;
+}
+
+.transaction-form-dialog-panel--wide app-transaction-form .mat-mdc-form-field-hint-wrapper,
+.transaction-form-dialog-panel--wide app-transaction-form .mat-mdc-form-field-hint {
+  color: #64748b;
+}
+
+.transaction-form-dialog-panel--wide .tx-save-main.mat-mdc-unelevated-button.mat-primary,
+.transaction-form-dialog-panel--wide .tx-save-plus.mat-mdc-unelevated-button.mat-primary {
+  --mdc-filled-button-container-color: #0d9488;
+  --mdc-filled-button-hover-state-layer-color: rgba(255, 255, 255, 0.12);
+  --mdc-filled-button-pressed-state-layer-color: rgba(255, 255, 255, 0.18);
+  --mdc-filled-button-label-text-color: #fff;
+  --mdc-filled-button-disabled-container-color: #cbd5e1;
+  --mdc-filled-button-disabled-label-text-color: #f8fafc;
+}
+
+.transaction-form-dialog-panel .tx-save-btn.mat-mdc-unelevated-button.mat-primary {
+  border-radius: 999px;
+  padding-inline: 1.25rem;
+}
+
+/* Padrao visual de inputs (aplicacao inteira) */
+.mat-mdc-form-field.mat-form-field-appearance-outline {
+  --mdc-outlined-text-field-container-shape: 10px;
+  --mdc-outlined-text-field-outline-width: 1px;
+  --mdc-outlined-text-field-focus-outline-width: 1px;
+  --mdc-outlined-text-field-outline-color: #cfd6e2;
+  --mdc-outlined-text-field-hover-outline-color: #c1cada;
+  --mdc-outlined-text-field-focus-outline-color: #8fa2bf;
+  --mdc-outlined-text-field-label-text-color: #6f7f97;
+  --mdc-outlined-text-field-focus-label-text-color: #6f7f97;
+  --mdc-outlined-text-field-input-text-color: #1f2937;
+  --mdc-outlined-text-field-caret-color: #334155;
+  --mat-select-enabled-arrow-color: #4b5563;
+}
+
+.mat-mdc-form-field.mat-form-field-appearance-outline .mat-mdc-text-field-wrapper {
+  background: #fff;
+}
+
+.mat-mdc-form-field.mat-form-field-appearance-outline .mat-mdc-form-field-infix {
+  min-height: 50px;
+  padding-top: 12px;
+  padding-bottom: 10px;
+}
+
+.mat-mdc-form-field.mat-form-field-appearance-outline .mdc-floating-label {
+  letter-spacing: 0.01em;
+}
+
+.transaction-details-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 12px;
+  padding: 0;
+}
+
+.transaction-details-dialog-panel .mat-mdc-dialog-surface {
+  background: #fff;
+}
+
+.repetition-customize-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 14px;
+  padding: 0;
+}
+
+.account-form-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 14px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.account-form-dialog-panel .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 640px);
+}
+
+.account-form-dialog-panel .mat-mdc-dialog-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.account-form-dialog-panel app-account-form-dialog {
+  display: block;
+  width: 100%;
+  font-family: 'DM Sans', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.account-form-dialog-panel .acc-save-btn.mat-mdc-unelevated-button.mat-primary {
+  --mdc-filled-button-container-color: #0d9488;
+  --mdc-filled-button-label-text-color: #fff;
+}
+
+/* Menu de utilizador no shell (painel em overlay) */
+.cdk-overlay-container .cdk-overlay-pane .mat-mdc-menu-panel.shell-user-menu-panel,
+.cdk-overlay-container .cdk-overlay-pane .mdc-menu-surface.mat-mdc-menu-panel.shell-user-menu-panel {
+  width: 340px !important;
+  max-width: calc(100vw - 24px) !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+  padding: 0 !important;
+  background: #fff !important;
+  background-color: #fff !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  --mat-menu-container-color: #fff !important;
+  --mdc-menu-container-color: #fff !important;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.2),
+    0 1px 1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 1px -1px rgba(0, 0, 0, 0.12) !important;
+}
+
+.cdk-overlay-container .cdk-overlay-pane .mat-mdc-menu-panel.shell-user-menu-panel .mat-mdc-menu-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  background: #fff !important;
+  background-color: #fff !important;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
+/* Fallback forte para classes dinâmicas do Material no overlay (before/below). */
+.cdk-overlay-container .mat-mdc-menu-panel.mat-menu-before.mat-menu-below,
+.cdk-overlay-container .mdc-menu-surface.mat-mdc-menu-panel.mat-menu-before.mat-menu-below {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  background: #fff !important;
+  background-color: #fff !important;
+  background-image: none !important;
+  --mat-menu-container-color: #fff !important;
+  --mdc-menu-container-color: #fff !important;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.2),
+    0 1px 1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 1px -1px rgba(0, 0, 0, 0.12) !important;
+  opacity: 1 !important;
+}
+
+.shell-user-menu {
+  display: block;
+  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: #fff !important;
+  background-color: #fff !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  border-radius: 20px;
+}
+
+.shell-user-menu__divider {
+  height: 1px;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.035);
+}
+
+.shell-user-menu__top {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.15rem 0.72rem;
+  align-items: center;
+  background: #fff !important;
+  background-color: #fff !important;
+}
+
+.shell-user-menu__avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #4a5568;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: grid;
+  place-items: center;
+  font-weight: 400;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.shell-user-menu__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.shell-user-menu__name {
+  font-weight: 400;
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shell-user-menu__tag {
+  font-size: 0.9rem;
+  color: #7b8592;
+  margin-top: 0;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.shell-user-menu__btn-wide {
+  margin-top: 0.32rem !important;
+  width: 198px;
+  max-width: 100%;
+  font-weight: 400 !important;
+  font-size: 0.78rem !important;
+  line-height: 1.2 !important;
+  border-radius: 8px !important;
+  min-height: 32px !important;
+  padding-inline: 0.65rem !important;
+}
+
+.shell-user-menu__mid {
+  display: flex;
+  justify-content: center;
+  padding: 0.82rem 0.85rem 0.65rem;
+  background: #fff !important;
+  background-color: #fff !important;
+}
+
+.shell-user-menu__btn-create {
+  border-radius: 9px !important;
+  font-weight: 400 !important;
+  font-size: 0.78rem !important;
+  color: #11b894 !important;
+  border-color: #11b894 !important;
+  min-height: 31px !important;
+  width: auto;
+  padding-inline: 0.8rem !important;
+}
+
+/* Botão «Configurações…»: contorno azul (mock referência). */
+.shell-user-menu__btn-settings.mat-mdc-outlined-button:not(:disabled) {
+  --mdc-outlined-button-label-text-color: #2563eb;
+  --mdc-outlined-button-outline-color: #2563eb;
+  --mat-outlined-button-state-layer-color: rgba(37, 99, 235, 0.08);
+  background: transparent;
+}
+
+.shell-user-menu__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem 0.7rem 1.1rem;
+  background: #fff !important;
+  background-color: #fff !important;
+  border-top: none;
+}
+
+.shell-user-menu__foot-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.shell-user-menu__foot-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ececec;
+  color: #4a5568;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: grid;
+  place-items: center;
+  font-weight: 400;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.shell-user-menu__foot-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.02rem;
+  min-width: 0;
+}
+
+.shell-user-menu__logged-label {
+  font-size: 0.68rem;
+  font-style: italic;
+  color: #7b8592;
+}
+
+.shell-user-menu__identity {
+  font-size: 0.88rem;
+  color: #2f3540;
+  font-weight: 400;
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-user-menu__foot-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.shell-user-menu__icon-btn.mat-mdc-icon-button {
+  --mdc-icon-button-icon-color: #737373;
+  --mat-icon-button-state-layer-color: rgba(75, 85, 99, 0.12);
+  width: 36px !important;
+  height: 36px !important;
+  padding: 5px !important;
+}
+
+.shell-user-menu__icon-btn mat-icon {
+  font-size: 1.45rem;
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+@media print {
+  @page {
+    margin: 1.4cm;
+    size: A4 portrait;
+  }
+
+  body.tx-print-active {
+    background: #fff !important;
+  }
+
+  body.tx-print-active .app-frame .rail,
+  body.tx-print-active .app-frame .topbar,
+  body.tx-print-active .app-frame .fab-global-stack,
+  body.tx-print-active .tx-screen,
+  body.st-print-active .app-frame .rail,
+  body.st-print-active .app-frame .topbar,
+  body.st-print-active .app-frame .fab-global-stack,
+  body.st-print-active .st-screen {
+    display: none !important;
+  }
+
+  body.tx-print-active .content,
+  body.st-print-active .content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.tx-print-active {
+    background: #fff !important;
+  }
+
+  body.st-print-active {
+    background: #fff !important;
+  }
+
+  body.tx-print-active .tx-print,
+  body.st-print-active .st-print {
+    display: block !important;
+  }
+}

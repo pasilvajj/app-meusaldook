@@ -1,0 +1,161 @@
+<div class="app-frame">
+  <aside class="rail" aria-label="Navegação principal">
+    <a class="rail-brand" routerLink="/dashboard" aria-label="Início">R$</a>
+    <nav class="rail-nav">
+      <a
+        mat-icon-button
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        matTooltip="Visão geral"
+        matTooltipPosition="right"
+      >
+        <mat-icon>dashboard</mat-icon>
+      </a>
+      <a mat-icon-button routerLink="/transactions" routerLinkActive="active" matTooltip="Transações" matTooltipPosition="right">
+        <mat-icon>receipt_long</mat-icon>
+      </a>
+      <a mat-icon-button routerLink="/categories" routerLinkActive="active" matTooltip="Categorias" matTooltipPosition="right">
+        <mat-icon>category</mat-icon>
+      </a>
+      <a mat-icon-button routerLink="/contas" routerLinkActive="active" matTooltip="Contas" matTooltipPosition="right">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </a>
+      <a mat-icon-button routerLink="/metas" routerLinkActive="active" matTooltip="Metas de orçamento" matTooltipPosition="right">
+        <mat-icon>flag</mat-icon>
+      </a>
+    </nav>
+    <div class="rail-spacer"></div>
+    <div class="rail-date">{{ todayLabel() }}</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button mat-icon-button type="button" class="ghost" aria-label="Menu">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <div class="topbar-titles">
+          <span class="eyebrow">Finanças pessoais</span>
+          <span class="page-title">{{ pageTitle() }}</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        @if (showSubscribeCta()) {
+          <button mat-stroked-button type="button" class="subscribe-lite" (click)="comingSoon('Assinar plano')">
+            Assinar o Meu Dinheiro
+          </button>
+          <button mat-icon-button type="button" class="ghost ghost--hide-xs" matTooltip="Visão geral" aria-label="Atalhos" routerLink="/dashboard">
+            <mat-icon>dashboard</mat-icon>
+          </button>
+          <span class="topbar-sep ghost--hide-xs" aria-hidden="true"></span>
+        }
+
+        <button mat-icon-button type="button" class="ghost" matTooltip="Ajuda" aria-label="Ajuda" (click)="comingSoon('Ajuda')">
+          <mat-icon>help_outline</mat-icon>
+        </button>
+
+        <button
+          type="button"
+          class="user-menu-trigger"
+          [matMenuTriggerFor]="userMenu"
+          (menuOpened)="onUserMenuOpened()"
+          aria-haspopup="menu"
+          aria-label="Menu da conta"
+        >
+          <span class="user-menu-trigger__label">{{ auth.userDisplayName() }}</span>
+          <mat-icon class="user-menu-trigger__caret">expand_more</mat-icon>
+        </button>
+        <span class="user-avatar-chip" aria-hidden="true">{{ userInitials() }}</span>
+
+        <mat-menu #userMenu="matMenu" xPosition="before" panelClass="shell-user-menu-panel">
+          <div class="shell-user-menu" (click)="$event.stopPropagation()">
+            <div class="shell-user-menu__top">
+              <div class="shell-user-menu__avatar">{{ userInitials() }}</div>
+              <div class="shell-user-menu__meta">
+                <div class="shell-user-menu__name">{{ userMenuDisplayName() }}</div>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  routerLink="/settings"
+                  class="shell-user-menu__btn-wide shell-user-menu__btn-settings"
+                  (click)="$event.stopPropagation()"
+                >
+                  Configurações da conta e plano
+                </button>
+              </div>
+            </div>
+            <div class="shell-user-menu__divider" aria-hidden="true"></div>
+            <div class="shell-user-menu__foot">
+              <div class="shell-user-menu__foot-left">
+                <span class="shell-user-menu__foot-avatar" aria-hidden="true">{{ userInitials() }}</span>
+                <div class="shell-user-menu__foot-text">
+                  <span class="shell-user-menu__logged-label">Logado como:</span>
+                  <span class="shell-user-menu__identity">{{auth.userDisplayName() }}</span>
+                </div>
+              </div>
+              <div class="shell-user-menu__foot-actions">
+                <button mat-icon-button type="button" class="shell-user-menu__icon-btn" aria-label="Terminar sessão" (click)="logout(); $event.stopPropagation()">
+                  <mat-icon>power_settings_new</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-menu>
+      </div>
+    </header>
+
+    <!-- @if (showTipBanner()) {
+      <div class="banner" role="status">
+        <span class="banner-dot"></span>
+        <span>Regista transações ao longo do mês para preencher gráficos e tendências nesta visão.</span>
+      </div>
+    } -->
+
+    <main class="content">
+      <router-outlet />
+    </main>
+
+    @if (showGlobalTransactionFab()) {
+      <div class="fab-global-stack" aria-label="Ações rápidas de lançamentos">
+        <button
+          mat-fab
+          color="accent"
+          type="button"
+          class="fab-global fab-global--main"
+          matTooltipPosition="left"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+        <div class="fab-option-row fab-global--option">
+          <span class="fab-option-label" aria-hidden="true">Incluir despesa</span>
+          <button
+            mat-fab
+            color="accent"
+            type="button"
+            class="fab-global fab-global--expense"
+            (click)="openFabExpense()"
+            matTooltipPosition="left"
+            aria-label="Incluir Despesa"
+          >
+            <mat-icon>arrow_downward</mat-icon>
+          </button>
+        </div>
+        <div class="fab-option-row fab-global--option">
+          <span class="fab-option-label" aria-hidden="true">Incluir receita</span>
+          <button
+            mat-fab
+            color="accent"
+            type="button"
+            class="fab-global fab-global--income"
+            (click)="openFabIncome()"
+            matTooltipPosition="left"
+            aria-label="Incluir Receita"
+          >
+            <mat-icon>arrow_upward</mat-icon>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,296 @@
+<div class="tx-screen">
+<div class="tx-page" [class.tx-page--expanded]="expandedView()">
+  <div class="tx-layout" [class.tx-layout--expanded]="expandedView()">
+    @if (!expandedView()) {
+    <aside class="tx-summary">
+      <section class="tx-period-card">
+        <button mat-icon-button type="button" (click)="shiftMonth(-1)" aria-label="Mês anterior">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="tx-period-label">{{ periodLabel() }}</span>
+        <button mat-icon-button type="button" (click)="shiftMonth(1)" aria-label="Mês seguinte">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </section>
+
+      <section class="tx-account-card">
+        <div class="tx-account-head">
+          <span>Confirmado</span>
+          <span>Projetado</span>
+        </div>
+        @for (acc of accountRows().rows; track acc.name) {
+          <div class="tx-account-row">
+            <span class="tx-account-name">{{ acc.name }}</span>
+            <strong [class.tx-num-neg]="acc.confirmed < 0">R$ {{ acc.confirmed | number: '1.2-2':'pt-BR' }}</strong>
+            <strong [class.tx-num-neg]="acc.projected < 0">R$ {{ acc.projected | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+        }
+        <div class="tx-account-row tx-account-row--total">
+          <span class="tx-account-name">Total</span>
+          <strong [class.tx-num-neg]="accountRows().totalConfirmed < 0">R$ {{ accountRows().totalConfirmed | number: '1.2-2':'pt-BR' }}</strong>
+          <strong [class.tx-num-neg]="accountRows().totalProjected < 0">R$ {{ accountRows().totalProjected | number: '1.2-2':'pt-BR' }}</strong>
+        </div>
+      </section>
+
+      <section class="tx-result-card">
+        <h4>Resultado (R$)</h4>
+        <div class="tx-result-group">
+          <span>Entradas</span>
+          <div class="tx-result-subrow">
+            <span>Receitas</span>
+            <strong class="tx-num-pos">R$ {{ incomeTotal() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+          <div class="tx-result-subrow">
+            <span>Transferências</span>
+            <strong>R$ {{ transferInTotal() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+        </div>
+        <div class="tx-result-group">
+          <span>Saídas</span>
+          <div class="tx-result-subrow">
+            <span>Despesas</span>
+            <strong class="tx-num-neg">-{{ expenseTotal() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+          <div class="tx-result-subrow">
+            <span>Transferências</span>
+            <strong>R$ {{ transferOutTotal() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+          <div class="tx-result-subrow tx-result-subrow--total-out">
+            <span>Total saídas</span>
+            <strong class="tx-num-neg">-{{ outgoingTotal() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+        </div>
+        <div class="tx-result-row tx-result-row--total">
+          <span>Resultado</span>
+          <strong [class.tx-num-neg]="resultTotal() < 0" [class.tx-num-pos]="resultTotal() >= 0">
+            R$ {{ resultTotal() | number: '1.2-2':'pt-BR' }}
+          </strong>
+        </div>
+      </section>
+    </aside>
+    }
+
+    <section class="tx-main">
+      <div class="tx-main-head">
+        <div class="tx-filter-inline">
+          <span class="tx-filter-label">Filtrar</span>
+          <span class="tx-dot tx-dot--pending"></span><small>Pendentes</small>
+          <span class="tx-dot tx-dot--planned"></span><small>Agendados</small>
+          <span class="tx-dot tx-dot--ok"></span><small>Confirmados</small>
+          <span class="tx-dot tx-dot--recon"></span><small>Conciliados</small>
+        </div>
+        <div class="tx-head-actions">
+          <button
+            mat-icon-button
+            type="button"
+            (click)="toggleExpandedView()"
+            [attr.aria-label]="expandedView() ? 'Restaurar vista' : 'Expandir tabela'"
+            [matTooltip]="expandedView() ? 'Restaurar vista' : 'Expandir tabela'"
+          >
+            <mat-icon>{{ expandedView() ? 'close_fullscreen' : 'open_in_full' }}</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            type="button"
+            (click)="printView()"
+            [disabled]="printing() || loading()"
+            aria-label="Imprimir relatório"
+            matTooltip="Imprimir relatório"
+          >
+            <mat-icon>print</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="center">
+          <mat-spinner diameter="40" />
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table mat-table [dataSource]="displayRows()" class="tx-table">
+            <ng-container matColumnDef="occurredAt">
+              <th mat-header-cell *matHeaderCellDef class="tx-col-date">Data</th>
+              <td mat-cell *matCellDef="let item" class="tx-col-date">
+                <span class="tx-row-date">
+                  <span class="tx-dot" [class]="ledgerDateDotClass(item)"></span>
+                  <span class="tx-row-date-text">{{ item.occurredAtIso | date: 'dd/MM/yy':'':'pt-BR' }}</span>
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="description">
+              <th mat-header-cell *matHeaderCellDef class="tx-col-desc">Lançamento</th>
+              <td mat-cell *matCellDef="let item" class="tx-col-desc">
+                @if (item.kind === 'prior-balance') {
+                  <div class="tx-row-main tx-row-main--ledger">
+                    <span class="tx-ledger-title">{{ item.titleLine }}</span>
+                  </div>
+                } @else if (item.kind === 'opening-balance') {
+                  <div class="tx-row-main tx-row-main--ledger tx-row-main--stack">
+                    <span class="tx-ledger-title">{{ item.titleLine }}</span>
+                    @if (item.subtitle) {
+                      <span class="tx-ledger-sub">{{ item.subtitle }}</span>
+                    }
+                  </div>
+                } @else if (item.tx) {
+                  <div class="tx-row-main tx-row-main--ledger-row tx-row-main--stack">
+                    @if (expenseDescriptionLabel(item.tx); as desc) {
+                      <button type="button" class="tx-row-desc-link" (click)="openDetails(item.tx); $event.stopPropagation()">
+                        {{ desc }}
+                      </button>
+                    }
+                    <div class="tx-row-chips">
+                      <span class="tx-chip">{{ item.titleLine }}</span>
+                      @if (item.categoryLabel) {
+                        <span class="tx-chip">{{ item.categoryLabel }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef class="tx-col-status"></th>
+              <td mat-cell *matCellDef="let item" class="tx-col-status tx-status-cell">
+                @if (ledgerShowStatusIcon(item)) {
+                  <mat-icon [class]="ledgerStatusClass(item)">{{ ledgerStatusIcon(item) }}</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="amount">
+              <th mat-header-cell *matHeaderCellDef class="tx-col-amount tx-col-head-num">Valor</th>
+              <td
+                mat-cell
+                *matCellDef="let item"
+                class="tx-col-amount tx-col-num"
+                [class.tx-num-neg]="item.signedAmount !== null && item.signedAmount < 0"
+                [class.tx-num-pos]="item.signedAmount !== null && item.signedAmount >= 0"
+              >
+                <span class="tx-num-cell">
+                  @if (item.kind === 'prior-balance') {
+                    <span class="tx-amount-empty">—</span>
+                  } @else {
+                    {{ item.signedAmount ?? 0 | number: '1.2-2':'pt-BR' }}
+                  }
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="tx-col-actions"></th>
+              <td mat-cell *matCellDef="let item" class="tx-col-actions">
+                @if (item.kind === 'tx' && item.tx) {
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="tx-action-btn"
+                    [matMenuTriggerFor]="txMenu"
+                    [matMenuTriggerData]="{ row: item.tx }"
+                    aria-label="Ações"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="balance">
+              <th mat-header-cell *matHeaderCellDef class="tx-col-balance tx-col-head-num">Saldo</th>
+              <td
+                mat-cell
+                *matCellDef="let item"
+                class="tx-col-balance tx-col-num"
+                [class.tx-num-neg]="item.balance < 0"
+                [class.tx-num-pos]="item.balance >= 0"
+              >
+                <span class="tx-num-cell">{{ item.balance | number: '1.2-2':'pt-BR' }}</span>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+        </div>
+
+        <mat-paginator
+          [length]="totalElements()"
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="[10, 20, 50]"
+          (page)="onPage($event)"
+        />
+      }
+    </section>
+  </div>
+</div>
+</div>
+
+<div class="tx-print" aria-hidden="true">
+  <header class="tx-print-header">
+    <div>
+      <p class="tx-print-eyebrow">Relatório de movimentos</p>
+      <h1 class="tx-print-title">{{ printPeriodTitle() }}</h1>
+      <p class="tx-print-meta">
+        {{ principalAccount()?.name ?? 'Conta principal' }}
+        @if (printedAt(); as at) {
+          · Gerado em {{ at | date: 'dd/MM/yyyy HH:mm':'':'pt-BR' }}
+        }
+      </p>
+    </div>
+  </header>
+
+  <table class="tx-print-table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Lançamento</th>
+        <th class="tx-print-num">Valor (R$)</th>
+        <th class="tx-print-num">Saldo (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of printLedgerRows(); track item.sortKey + item.kind + (item.tx?.id ?? '')) {
+        <tr>
+          <td>{{ item.occurredAtIso | date: 'dd/MM/yyyy':'':'pt-BR' }}</td>
+          <td>{{ printDescription(item) }}</td>
+          <td class="tx-print-num" [class.tx-print-neg]="item.signedAmount !== null && item.signedAmount < 0">
+            @if (item.kind === 'prior-balance') {
+              —
+            } @else {
+              {{ item.signedAmount ?? 0 | number: '1.2-2':'pt-BR' }}
+            }
+          </td>
+          <td class="tx-print-num" [class.tx-print-neg]="item.balance < 0">
+            {{ item.balance | number: '1.2-2':'pt-BR' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <footer class="tx-print-footer">
+    <div class="tx-print-summary">
+      <span>Receitas: R$ {{ printTotals().income | number: '1.2-2':'pt-BR' }}</span>
+      <span>Despesas: R$ {{ printTotals().expense | number: '1.2-2':'pt-BR' }}</span>
+      <strong [class.tx-print-neg]="printTotals().result < 0">
+        Resultado: R$ {{ printTotals().result | number: '1.2-2':'pt-BR' }}
+      </strong>
+    </div>
+  </footer>
+</div>
+
+<mat-menu #txMenu="matMenu">
+  <ng-template matMenuContent let-row="row">
+    <button mat-menu-item type="button" (click)="edit(row)">
+      <mat-icon>edit</mat-icon>
+      <span>Editar</span>
+    </button>
+    <button mat-menu-item type="button" (click)="remove(row)">
+      <mat-icon color="warn">delete_outline</mat-icon>
+      <span>Eliminar</span>
+    </button>
+  </ng-template>
+</mat-menu>

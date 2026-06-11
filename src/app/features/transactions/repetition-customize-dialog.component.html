@@ -1,0 +1,84 @@
+<div class="rep-dlg">
+  <div mat-dialog-title class="rep-dlg-head">
+    <button mat-icon-button type="button" (click)="close()" aria-label="Voltar">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="rep-dlg-title">Definir repetição</span>
+  </div>
+
+  <mat-dialog-content class="rep-dlg-body">
+    <form [formGroup]="form" (ngSubmit)="apply()" id="rep-form">
+      <mat-radio-group formControlName="repetition" class="rep-radio-row">
+        <mat-radio-button value="UNICA">Única</mat-radio-button>
+        <mat-radio-button value="PARCELADO">Parcelada</mat-radio-button>
+        <mat-radio-button value="FIXA">Fixa</mat-radio-button>
+      </mat-radio-group>
+
+      @if (isParcelado()) {
+        <div class="rep-grid">
+          <mat-form-field appearance="outline" class="rep-field">
+            <mat-label>Repetição</mat-label>
+            <mat-select formControlName="periodicity">
+              <mat-option value="MENSAL">mensal</mat-option>
+              <mat-option value="SEMANAL">semanal</mat-option>
+              <mat-option value="TRIMESTRAL">trimestral</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="rep-field">
+            <mat-label>Repete-se a cada n meses</mat-label>
+            <input matInput type="number" min="1" max="120" formControlName="everyNMonths" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="rep-field">
+            <mat-label>Número de parcelas</mat-label>
+            <input matInput type="number" min="2" max="999" formControlName="installmentCount" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="rep-field">
+            <mat-label>Parcela inicial</mat-label>
+            <input matInput type="number" min="1" formControlName="initialInstallment" />
+          </mat-form-field>
+          <div class="rep-parcel-row">
+            <mat-form-field appearance="outline" class="rep-field">
+              <mat-label>Valor da parcela (R$)</mat-label>
+              <span matTextPrefix class="rep-prefix">R$&nbsp;</span>
+              <input matInput type="number" min="0" step="0.01" formControlName="parcelAmount" />
+            </mat-form-field>
+            <mat-checkbox formControlName="useParcelAmountMode">Valor da parcela</mat-checkbox>
+          </div>
+        </div>
+      }
+
+      @if (isFixa()) {
+        <div class="rep-grid">
+          <mat-form-field appearance="outline" class="rep-field">
+            <mat-label>Repetição</mat-label>
+            <mat-select formControlName="periodicity">
+              <mat-option value="MENSAL">mensal</mat-option>
+              <mat-option value="SEMANAL">semanal</mat-option>
+              <mat-option value="TRIMESTRAL">trimestral</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="rep-field">
+            <mat-label>{{ everyIntervalLabel() }} *</mat-label>
+            <input matInput type="number" min="1" max="120" formControlName="everyNMonths" />
+          </mat-form-field>
+          <div class="rep-fixa-row">
+            <mat-checkbox formControlName="defineTotalOccurrences">Definir total de ocorrências</mat-checkbox>
+            @if (fixaDefineTotal()) {
+              <mat-form-field appearance="outline" class="rep-field rep-field--occ">
+                <mat-label>Total de ocorrências</mat-label>
+                <input matInput type="number" min="1" max="999" formControlName="installmentCount" />
+                @if (form.controls['installmentCount'].invalid && form.controls['installmentCount'].touched) {
+                  <mat-error>Indique o total</mat-error>
+                }
+              </mat-form-field>
+            }
+          </div>
+        </div>
+      }
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="rep-dlg-actions" align="end">
+    <button mat-flat-button color="primary" type="submit" form="rep-form">Aplicar alterações</button>
+  </mat-dialog-actions>
+</div>

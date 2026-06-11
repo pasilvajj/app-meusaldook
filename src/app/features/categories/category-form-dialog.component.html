@@ -1,0 +1,50 @@
+<div mat-dialog-title class="cat-dlg-title">
+  <span>{{ dialogTitle() }}</span>
+  <button mat-icon-button type="button" mat-dialog-close class="cat-dlg-close" aria-label="Fechar">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="cat-dlg-body">
+  <form [formGroup]="form" id="cat-form" (ngSubmit)="save()">
+    <mat-form-field appearance="outline" class="cat-field">
+      <mat-label>Tipo</mat-label>
+      <mat-select formControlName="kind">
+        <mat-option value="EXPENSE">Despesa</mat-option>
+        <mat-option value="INCOME">Receita</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="cat-field">
+      <mat-label>Nome</mat-label>
+      <input matInput formControlName="name" maxlength="100" autocomplete="off" />
+      <mat-hint align="end">{{ (form.controls.name.value || '').length }} / 100</mat-hint>
+      @if (form.controls.name.hasError('required') && form.controls.name.touched) {
+        <mat-error>Indique o nome</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="cat-field">
+      <mat-label>Subcategoria de</mat-label>
+      <mat-select formControlName="parentId">
+        <mat-option [value]="null">Sem categoria pai</mat-option>
+        @for (p of parentOptions(); track p.id) {
+          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions class="cat-dlg-actions" align="end">
+  <button
+    mat-flat-button
+    color="primary"
+    type="submit"
+    form="cat-form"
+    class="cat-save-single"
+    [disabled]="form.invalid || saving()"
+  >
+    {{ saving() ? 'A guardar…' : 'Salvar' }}
+  </button>
+</mat-dialog-actions>
