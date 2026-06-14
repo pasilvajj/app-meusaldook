@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
@@ -31,7 +31,7 @@ import { TransactionFormDialogService } from '../features/transactions/transacti
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
-export class ShellComponent implements OnInit {
+export class ShellComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly meApi = inject(MeApiService);
   private readonly router = inject(Router);
@@ -77,6 +77,10 @@ export class ShellComponent implements OnInit {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   });
 
+  readonly fabMenuOpen = signal(false);
+
+  private fabCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** Iniciais para avatares (2 letras se nome composto). */
   readonly userInitials = computed(() => initialsFromDisplayName(this.auth.userDisplayName()));
   readonly userMenuDisplayName = computed(() => toTitleCaseName(this.auth.userDisplayName()));
@@ -87,6 +91,30 @@ export class ShellComponent implements OnInit {
       next: (me) => this.auth.hydrateFromMeResponse(me),
       error: () => {},
     });
+  }
+
+  ngOnDestroy(): void {
+    this.clearFabCloseTimer();
+  }
+
+  openFabMenu(): void {
+    this.clearFabCloseTimer();
+    this.fabMenuOpen.set(true);
+  }
+
+  scheduleCloseFabMenu(): void {
+    this.clearFabCloseTimer();
+    this.fabCloseTimer = setTimeout(() => {
+      this.fabMenuOpen.set(false);
+      this.fabCloseTimer = null;
+    }, 220);
+  }
+
+  private clearFabCloseTimer(): void {
+    if (this.fabCloseTimer != null) {
+      clearTimeout(this.fabCloseTimer);
+      this.fabCloseTimer = null;
+    }
   }
 
   logout(): void {

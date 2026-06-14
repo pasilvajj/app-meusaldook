@@ -8,6 +8,9 @@ export interface TransactionRequest {
   accountPublicKey?: string | null;
   description?: string | null;
   occurredAt: string;
+  installmentGroupId?: string | null;
+  showInPayables?: boolean;
+  markAsPaid?: boolean;
 }
 
 export interface TransactionResponse {
@@ -21,6 +24,13 @@ export interface TransactionResponse {
   description: string | null;
   occurredAt: string;
   createdAt: string;
+  installmentGroupId?: string | null;
+  projected?: boolean;
+  recurringId?: number | null;
+  sourceTransactionId?: number | null;
+  occurrenceIndex?: number | null;
+  showInPayables?: boolean;
+  paidAt?: string | null;
 }
 
 export interface Page<T> {

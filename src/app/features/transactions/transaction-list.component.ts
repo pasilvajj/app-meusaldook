@@ -9,13 +9,23 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
+import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
 import { AccountApiService } from '../../core/services/account-api.service';
 import { TransactionResponse } from '../../core/models/transaction.models';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { TransactionFormDialogService } from './transaction-form-dialog.service';
 import { TransactionDetailsDialogComponent } from './transaction-details-dialog.component';
+import { installmentDeleteConfirmMessage } from './installment-utils';
+import {
+  canMarkExpensePaid,
+  fixedExpenseDeleteConfirmMessage,
+  isFixedExpense,
+  markExpensePaid$,
+  resolveExpenseEditDialogData,
+} from './fixed-expense-utils';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
 
@@ -125,6 +135,7 @@ function ledgerSortCmp(a: Omit<LedgerRowView, 'balance'>, b: Omit<LedgerRowView,
     MatIconModule,
     MatMenuModule,
     MatTooltipModule,
+    MatSnackBarModule,
     DecimalPipe,
     DatePipe,
   ],
@@ -133,9 +144,11 @@ function ledgerSortCmp(a: Omit<LedgerRowView, 'balance'>, b: Omit<LedgerRowView,
 })
 export class TransactionListComponent implements OnInit {
   private readonly api = inject(TransactionApiService);
+  private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly accountApi = inject(AccountApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
   private readonly dialog = inject(MatDialog);
+  private readonly snack = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly displayedColumns = ['occurredAt', 'description', 'status', 'amount', 'actions', 'balance'] as const;
@@ -248,6 +261,7 @@ export class TransactionListComponent implements OnInit {
         size: this.pageSize(),
         from: from.toISOString(),
         to: to.toISOString(),
+        includeProjected: true,
       }),
       account: this.accountApi.getByPublicKey('principal').pipe(catchError(() => of(null))),
     })
@@ -320,6 +334,7 @@ export class TransactionListComponent implements OnInit {
         size: 5000,
         from: from.toISOString(),
         to: to.toISOString(),
+        includeProjected: true,
       })
       .pipe(catchError(() => of({ content: this.rows(), totalElements: this.rows().length })))
       .subscribe({
@@ -441,13 +456,49 @@ export class TransactionListComponent implements OnInit {
     this.load();
   }
 
+  markPaid(row: TransactionResponse): void {
+    if (!canMarkExpensePaid(row)) return;
+    markExpensePaid$(this.api, row).subscribe({
+      next: () => this.load(),
+      error: () => this.notifyActionError('Não foi possível marcar como paga.'),
+    });
+  }
+
   edit(row: TransactionResponse): void {
-    this.txDialog.openExpense({ transactionId: row.id }).subscribe();
+    const target = resolveExpenseEditDialogData(row);
+    if (!target.recurringId && !target.transactionId) {
+      alert('Não foi possível identificar esta despesa para edição.');
+      return;
+    }
+    this.txDialog.openExpense(target).subscribe();
   }
 
   remove(row: TransactionResponse): void {
-    if (!confirm('Eliminar esta transação?')) return;
-    this.api.delete(row.id).subscribe(() => this.load());
+    if (isFixedExpense(row)) {
+      if (!confirm(fixedExpenseDeleteConfirmMessage(row))) return;
+      const req$ = row.recurringId
+        ? this.recurringApi.delete(row.recurringId)
+        : row.sourceTransactionId
+          ? this.api.delete(row.sourceTransactionId)
+          : row.id > 0
+            ? this.api.delete(row.id)
+            : null;
+      if (!req$) return;
+      req$.subscribe({
+        next: () => this.load(),
+        error: () => this.notifyActionError('Não foi possível excluir a despesa fixa.'),
+      });
+      return;
+    }
+    if (!confirm(installmentDeleteConfirmMessage(row))) return;
+    this.api.delete(row.id).subscribe({
+      next: () => this.load(),
+      error: () => this.notifyActionError('Não foi possível excluir o lançamento.'),
+    });
+  }
+
+  private notifyActionError(message: string): void {
+    this.snack.open(message, 'Fechar', { duration: 6000 });
   }
 
   openDetails(row: TransactionResponse): void {
@@ -471,12 +522,12 @@ export class TransactionListComponent implements OnInit {
   }
 
   txStatus(row: TransactionResponse): TxUiStatus {
+    if (row.paidAt) return 'CONFIRMADO';
     const when = new Date(row.occurredAt).getTime();
     const now = Date.now();
-    if (Number.isFinite(when) && when > now) return 'AGENDADO';
+    if (row.projected || (Number.isFinite(when) && when > now)) return 'AGENDADO';
     if (row.kind === 'INCOME') return 'CONCILIADO';
-    // MVP: sem coluna de estado na api-meusaldook, despesas passadas ficam como confirmadas.
-    return 'CONFIRMADO';
+    return 'PENDENTE';
   }
 
   txStatusIcon(row: TransactionResponse): string {

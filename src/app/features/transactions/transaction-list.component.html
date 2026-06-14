@@ -288,6 +288,12 @@
       <mat-icon>edit</mat-icon>
       <span>Editar</span>
     </button>
+    @if (row.kind === 'EXPENSE' && !row.paidAt) {
+      <button mat-menu-item type="button" (click)="markPaid(row)">
+        <mat-icon>check_circle</mat-icon>
+        <span>Marcar como paga</span>
+      </button>
+    }
     <button mat-menu-item type="button" (click)="remove(row)">
       <mat-icon color="warn">delete_outline</mat-icon>
       <span>Eliminar</span>

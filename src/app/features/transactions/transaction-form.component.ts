@@ -1,7 +1,7 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { forkJoin, merge, startWith } from 'rxjs';
+import { forkJoin, merge, of, startWith, map, switchMap, type Observable } from 'rxjs';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
@@ -14,7 +14,13 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
+import {
+  RecurringTransactionApiService,
+  type RecurringTransactionResponse,
+} from '../../core/services/recurring-transaction-api.service';
+import { parseFixaMeta } from './fixed-expense-utils';
 import { AccountApiService } from '../../core/services/account-api.service';
 import { CategoryApiService } from '../../core/services/category-api.service';
 import { MoneyKind } from '../../core/models/money-kind';
@@ -27,6 +33,8 @@ import type {
   RepetitionCustomizeDialogData,
   RepetitionCustomizeDialogResult,
 } from './repetition-customize-dialog.data';
+import { buildInstallmentTransactions } from './installment-planner';
+import type { TransactionRequest } from '../../core/models/transaction.models';
 
 @Component({
   selector: 'app-transaction-form',
@@ -44,6 +52,7 @@ import type {
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatDatepickerModule,
+    MatCheckboxModule,
     RouterLink,
   ],
   templateUrl: './transaction-form.component.html',
@@ -55,6 +64,7 @@ export class TransactionFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transactions = inject(TransactionApiService);
+  private readonly recurringTransactions = inject(RecurringTransactionApiService);
   private readonly categoriesApi = inject(CategoryApiService);
   private readonly accountsApi = inject(AccountApiService);
   private readonly dialogRef = inject(MatDialogRef<TransactionFormComponent>, { optional: true });
@@ -78,6 +88,9 @@ export class TransactionFormComponent implements OnInit {
   readonly dialogTitle = signal('Nova despesa');
   /** Texto do campo valor (layout despesa) — máscara pt-BR, sincronizado com `amount`. */
   readonly expenseAmountText = signal('');
+  /** Pagamento confirmado (default: sim em nova despesa). */
+  readonly expensePaymentConfirmed = signal(true);
+  readonly occurredDateIsFuture = signal(false);
   /** Valor em centavos (inteiro) — entrada tipo POS; evita texto cru tipo «150000» sem máscara após apagar/redigitar. */
   readonly expenseAmountCents = signal(0);
 
@@ -91,7 +104,7 @@ export class TransactionFormComponent implements OnInit {
     occurredDate: [null as Date | null],
     summary: [''],
     notes: ['', [Validators.maxLength(400)]],
-    tags: [''],
+    showInPayables: [true],
     accountKey: ['principal'],
     repetition: ['UNICA' as 'UNICA' | 'PARCELADO' | 'FIXA'],
     /** Parcelado — resumo (sincronizado com o modal «Definir repetição»). */
@@ -112,7 +125,15 @@ export class TransactionFormComponent implements OnInit {
     return this.allCategories().filter((c) => c.kind === kind);
   });
 
+  readonly showPayablesOption = computed(() => {
+    if (!this.expenseLayout) return false;
+    if (this.editingRecurringId != null) return true;
+    if (this.editingId != null) return !this.expensePaymentConfirmed();
+    return this.occurredDateIsFuture() || !this.expensePaymentConfirmed();
+  });
+
   private editingId: number | null = null;
+  private editingRecurringId: number | null = null;
 
   ngOnInit(): void {
     this.expenseLayout = this.inDialog && this.dialogData?.useExpenseLayout === true;
@@ -151,13 +172,29 @@ export class TransactionFormComponent implements OnInit {
 
   private initFormAfterLookups(cats: CategoryResponse[]): void {
     const routeId = this.route.snapshot.paramMap.get('id');
+    const dialogRecurringId = this.dialogData?.recurringId;
     const dialogTxId = this.dialogData?.transactionId;
+    const effectiveRecurringId =
+      dialogRecurringId != null && dialogRecurringId > 0 ? dialogRecurringId : null;
     const effectiveId =
       routeId != null && routeId !== ''
         ? Number(routeId)
         : dialogTxId != null && dialogTxId > 0
           ? dialogTxId
           : null;
+
+    if (effectiveRecurringId != null) {
+      this.editingRecurringId = effectiveRecurringId;
+      this.dialogTitle.set('Editar despesa');
+      this.recurringTransactions.get(effectiveRecurringId).subscribe({
+        next: (r) => this.applyRecurringToForm(r),
+        error: () => {
+          this.error.set('Não foi possível carregar a despesa fixa.');
+          this.loading.set(false);
+        },
+      });
+      return;
+    }
 
     if (effectiveId != null) {
       this.editingId = effectiveId;
@@ -177,8 +214,11 @@ export class TransactionFormComponent implements OnInit {
             occurredAt: localStr,
             occurredDate: new Date(local.getFullYear(), local.getMonth(), local.getDate()),
             accountKey: t.accountPublicKey ?? 'principal',
+            showInPayables: !!t.showInPayables,
           });
+          this.expensePaymentConfirmed.set(!!t.paidAt);
           this.splitDescriptionToSummaryNotes(t.description);
+          this.applyFixaMetaFromDescription(t.description);
           const cents = Math.round(t.amount * 100);
           this.expenseAmountCents.set(cents);
           this.expenseAmountText.set(formatBrlAmountInput(t.amount));
@@ -219,6 +259,8 @@ export class TransactionFormComponent implements OnInit {
       });
       this.expenseAmountCents.set(0);
       this.expenseAmountText.set(formatBrlAmountInput(0));
+      this.expensePaymentConfirmed.set(true);
+      this.updateOccurredDateIsFuture(todayDate);
       this.form.controls.occurredAt.updateValueAndValidity({ emitEvent: false });
       this.form.controls.occurredDate.updateValueAndValidity({ emitEvent: false });
       this.wireExpenseLayoutReactiveStreams();
@@ -246,31 +288,169 @@ export class TransactionFormComponent implements OnInit {
       this.form.controls.useParcelAmountMode.valueChanges,
       this.form.controls.parcelAmount.valueChanges,
       this.form.controls.installmentCount.valueChanges,
+      this.form.controls.occurredDate.valueChanges,
+      this.form.controls.showInPayables.valueChanges,
     )
       .pipe(startWith(null), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.syncParcelValidators();
         this.syncAmountNumericFromUi();
+        this.updateOccurredDateIsFuture(this.form.controls.occurredDate.value);
+        this.syncPayablesCheckboxWhenHidden();
+        this.syncPaymentWhenPayablesChecked();
       });
+  }
+
+  /** Contas a pagar só faz sentido com pagamento pendente. */
+  private syncPaymentWhenPayablesChecked(): void {
+    if (!this.isCreateExpense() || !this.showPayablesOption()) return;
+    if (this.form.controls.showInPayables.value) {
+      this.expensePaymentConfirmed.set(false);
+    }
+  }
+
+  isEditingRecurring(): boolean {
+    return this.editingRecurringId != null;
+  }
+
+  isCreateExpense(): boolean {
+    return this.editingId == null && this.editingRecurringId == null;
+  }
+
+  private updateOccurredDateIsFuture(date: Date | null): void {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      this.occurredDateIsFuture.set(false);
+      return;
+    }
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const selected = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const isFuture = selected.getTime() > todayStart.getTime();
+    this.occurredDateIsFuture.set(isFuture);
+    if (this.isCreateExpense() && isFuture) {
+      this.expensePaymentConfirmed.set(false);
+    }
+  }
+
+  private syncPayablesCheckboxWhenHidden(): void {
+    if (!this.showPayablesOption()) {
+      this.form.controls.showInPayables.setValue(false, { emitEvent: false });
+      return;
+    }
+    if (this.isCreateExpense()) {
+      this.form.controls.showInPayables.setValue(true, { emitEvent: false });
+    }
+  }
+
+  togglePaymentConfirmed(): void {
+    if (this.isEditingRecurring()) return;
+    if (this.editingId != null) {
+      if (!this.expensePaymentConfirmed()) {
+        this.markAsPaidOnServer();
+      }
+      return;
+    }
+    this.expensePaymentConfirmed.update((v) => !v);
+    if (this.expensePaymentConfirmed() && this.form.controls.showInPayables.value) {
+      this.form.controls.showInPayables.setValue(false, { emitEvent: false });
+    }
+    this.syncPayablesCheckboxWhenHidden();
+  }
+
+  private markAsPaidOnServer(): void {
+    if (this.editingId == null) return;
+    this.transactions.markPaid(this.editingId).subscribe({
+      next: () => {
+        this.expensePaymentConfirmed.set(true);
+        this.syncPayablesCheckboxWhenHidden();
+        if (this.dialogRef) {
+          this.dialogRef.close(true);
+        }
+      },
+      error: () => this.error.set('Erro ao marcar como paga.'),
+    });
+  }
+
+  private resolveShowInPayables(raw: boolean): boolean {
+    if (!this.showPayablesOption()) return false;
+    if (this.isCreateExpense()) return true;
+    return raw;
+  }
+
+  private resolveMarkAsPaidOnCreate(occurredIso: string): boolean {
+    if (!this.isCreateExpense() || !this.expensePaymentConfirmed()) return false;
+    const when = new Date(occurredIso);
+    if (Number.isNaN(when.getTime())) return true;
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const occurred = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+    return occurred.getTime() <= todayStart.getTime();
+  }
+
+  /** Primeira ocorrência de despesa fixa: só confirma pagamento se não for «contas a pagar». */
+  private shouldMarkFixedOccurrencePaid(showInPayables: boolean): boolean {
+    return this.expensePaymentConfirmed() && !showInPayables;
+  }
+
+  private applyRecurringToForm(r: RecurringTransactionResponse): void {
+    const start = new Date(r.startAt);
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    this.form.patchValue({
+      amount: r.amount,
+      kind: r.kind,
+      categoryId: r.categoryId,
+      accountKey: r.accountPublicKey ?? 'principal',
+      showInPayables: !!r.showInPayables,
+      occurredDate: startDate,
+      repetition: 'FIXA',
+      installmentPeriodicity: r.periodicity,
+      parcelEveryMonths: r.everyN,
+      defineTotalOccurrences: r.maxOccurrences != null,
+      installmentCount: r.maxOccurrences ?? 2,
+    });
+    this.splitDescriptionToSummaryNotes(r.description);
+    const cents = Math.round(r.amount * 100);
+    this.expenseAmountCents.set(cents);
+    this.expenseAmountText.set(formatBrlAmountInput(r.amount));
+    this.form.controls.occurredAt.clearValidators();
+    this.form.controls.occurredDate.setValidators([Validators.required]);
+    this.form.controls.occurredAt.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.occurredDate.updateValueAndValidity({ emitEvent: false });
+    this.syncParcelValidators();
+    this.wireExpenseLayoutReactiveStreams();
+    this.loading.set(false);
+  }
+
+  private applyFixaMetaFromDescription(desc: string | null): void {
+    const fixa = parseFixaMeta(desc);
+    if (!fixa) return;
+    this.form.patchValue({
+      repetition: 'FIXA',
+      installmentPeriodicity: fixa.periodicity,
+      parcelEveryMonths: fixa.everyN,
+      defineTotalOccurrences: fixa.maxOccurrences != null,
+      installmentCount: fixa.maxOccurrences ?? 2,
+    });
+    this.syncParcelValidators();
   }
 
   private splitDescriptionToSummaryNotes(desc: string | null): void {
     if (!desc) return;
-    const parts = desc.split(/\n\n+/);
-    if (parts.length >= 2) {
-      this.form.patchValue({ summary: parts[0], notes: parts.slice(1).join('\n\n') });
-    } else {
-      this.form.patchValue({ summary: desc });
-    }
-    const tagMatch = desc.match(/Tags:\s*(.+)$/im);
-    if (tagMatch) {
-      this.form.patchValue({ tags: tagMatch[1].trim() });
-    }
+    const lines = desc
+      .split(/\n\n+/)
+      .map((l) => l.trim())
+      .filter((l) => !!l && !l.startsWith('Tags:') && !l.startsWith('['));
+    if (!lines.length) return;
+    const [summary, ...rest] = lines;
+    this.form.patchValue({
+      summary,
+      notes: rest.join('\n\n'),
+    });
   }
 
   private syncDialogTitleFromKind(kind: MoneyKind): void {
     if (!this.expenseLayout) return;
-    const edit = this.editingId != null;
+    const edit = this.editingId != null || this.editingRecurringId != null;
     this.dialogTitle.set(
       kind === 'EXPENSE' ? (edit ? 'Editar despesa' : 'Nova despesa') : edit ? 'Editar receita' : 'Nova receita',
     );
@@ -499,11 +679,9 @@ export class TransactionFormComponent implements OnInit {
         this.error.set('Indique uma data válida.');
         return;
       }
-      const now = new Date();
       const pad = (n: number) => String(n).padStart(2, '0');
       const ymd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      const local = new Date(`${ymd}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`);
-      occurredIso = local.toISOString();
+      occurredIso = new Date(`${ymd}T12:00:00`).toISOString();
     } else {
       occurredIso = new Date(v.occurredAt).toISOString();
     }
@@ -521,19 +699,100 @@ export class TransactionFormComponent implements OnInit {
       amount = Math.round(v.parcelAmount * v.installmentCount * 100) / 100;
     }
 
-    const body = {
+    const showInPayables = this.resolveShowInPayables(!!v.showInPayables);
+    const markAsPaid = this.resolveMarkAsPaidOnCreate(occurredIso);
+
+    const body: TransactionRequest = {
       amount,
       kind: v.kind,
       categoryId: v.categoryId,
       accountPublicKey: v.accountKey?.trim() || 'principal',
       description,
       occurredAt: occurredIso,
+      showInPayables,
+      markAsPaid: markAsPaid || undefined,
     };
 
-    const req$ =
-      this.editingId != null
-        ? this.transactions.update(this.editingId, body)
-        : this.transactions.create(body);
+    let req$: Observable<void>;
+    if (this.editingRecurringId != null) {
+      req$ = this.recurringTransactions
+        .update(this.editingRecurringId, {
+          amount: v.amount,
+          kind: v.kind,
+          categoryId: v.categoryId,
+          accountPublicKey: v.accountKey?.trim() || 'principal',
+          description,
+          startAt: occurredIso,
+          periodicity: v.installmentPeriodicity ?? 'MENSAL',
+          everyN: v.parcelEveryMonths ?? 1,
+          maxOccurrences:
+            v.defineTotalOccurrences && (v.installmentCount ?? 0) >= 1 ? v.installmentCount : null,
+          showInPayables,
+        })
+        .pipe(map(() => void 0));
+    } else if (this.editingId != null) {
+      req$ = this.transactions.update(this.editingId, body).pipe(map(() => void 0));
+    } else if (this.shouldCreateInstallments(v)) {
+      const installmentGroupId = crypto.randomUUID();
+      req$ = forkJoin(
+        buildInstallmentTransactions({
+          startDate: this.resolveExpenseStartDate(v, occurredIso),
+          kind: v.kind,
+          categoryId: v.categoryId,
+          accountPublicKey: v.accountKey?.trim() || 'principal',
+          baseDescription: description,
+          installmentCount: v.installmentCount,
+          initialInstallment: v.initialInstallment,
+          parcelEveryMonths: v.parcelEveryMonths,
+          periodicity: v.installmentPeriodicity,
+          parcelAmount: v.parcelAmount,
+          useParcelAmountMode: v.useParcelAmountMode,
+          totalAmount: amount,
+          installmentGroupId,
+          showInPayables,
+        }).map((installment) =>
+          this.transactions.create({
+            ...installment,
+            showInPayables: this.resolveShowInPayables(!!installment.showInPayables),
+            markAsPaid:
+              this.expensePaymentConfirmed() &&
+              !this.isInstallmentDateFuture(installment.occurredAt)
+                ? true
+                : undefined,
+          }),
+        ),
+      ).pipe(map(() => void 0));
+    } else if (this.shouldCreateFixedRecurring(v)) {
+      req$ = this.recurringTransactions
+        .create({
+          amount: v.amount,
+          kind: v.kind,
+          categoryId: v.categoryId,
+          accountPublicKey: v.accountKey?.trim() || 'principal',
+          description,
+          startAt: occurredIso,
+          periodicity: v.installmentPeriodicity ?? 'MENSAL',
+          everyN: v.parcelEveryMonths ?? 1,
+          maxOccurrences:
+            v.defineTotalOccurrences && (v.installmentCount ?? 0) >= 1 ? v.installmentCount : null,
+          showInPayables,
+        })
+        .pipe(
+          switchMap((created) => {
+            if (!this.shouldMarkFixedOccurrencePaid(showInPayables)) {
+              return of(void 0);
+            }
+            return this.transactions
+              .markOccurrencePaid({
+                occurredAt: occurredIso,
+                recurringId: created.id,
+              })
+              .pipe(map(() => void 0));
+          }),
+        );
+    } else {
+      req$ = this.transactions.create(body).pipe(map(() => void 0));
+    }
     req$.subscribe({
       next: () => {
         if (this.dialogRef) {
@@ -546,10 +805,46 @@ export class TransactionFormComponent implements OnInit {
     });
   }
 
+  private shouldCreateInstallments(v: {
+    repetition?: 'UNICA' | 'PARCELADO' | 'FIXA';
+    installmentCount?: number;
+  }): boolean {
+    return (
+      this.expenseLayout &&
+      this.editingId == null &&
+      v.repetition === 'PARCELADO' &&
+      (v.installmentCount ?? 0) >= 2
+    );
+  }
+
+  private shouldCreateFixedRecurring(v: { repetition?: 'UNICA' | 'PARCELADO' | 'FIXA' }): boolean {
+    return this.expenseLayout && this.editingId == null && v.repetition === 'FIXA';
+  }
+
+  private isInstallmentDateFuture(occurredIso: string): boolean {
+    const when = new Date(occurredIso);
+    if (Number.isNaN(when.getTime())) return false;
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const occurred = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+    return occurred.getTime() > todayStart.getTime();
+  }
+
+  private resolveExpenseStartDate(
+    v: { occurredDate: Date | null },
+    occurredIso: string,
+  ): Date {
+    const d = v.occurredDate;
+    if (d instanceof Date && !Number.isNaN(d.getTime())) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+    const parsed = new Date(occurredIso);
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+
   private buildDescription(v: {
     summary: string;
     notes: string;
-    tags: string;
     description: string;
     repetition?: 'UNICA' | 'PARCELADO' | 'FIXA';
     installmentPeriodicity?: InstallmentPeriodicity;
@@ -563,7 +858,6 @@ export class TransactionFormComponent implements OnInit {
     if (this.expenseLayout) {
       const summary = v.summary?.trim() ?? '';
       const notes = v.notes?.trim() ?? '';
-      const tags = v.tags?.trim() ?? '';
       const parts: string[] = [];
       if (summary) parts.push(summary);
       if (notes) parts.push(notes);
@@ -584,9 +878,6 @@ export class TransactionFormComponent implements OnInit {
         }
         repLine += ']';
         out = out ? `${out}\n\n${repLine}` : repLine;
-      }
-      if (tags) {
-        out = out ? `${out}\n\nTags: ${tags}` : `Tags: ${tags}`;
       }
       return out;
     }

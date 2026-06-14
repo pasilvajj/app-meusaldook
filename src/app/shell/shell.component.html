@@ -117,44 +117,59 @@
     </main>
 
     @if (showGlobalTransactionFab()) {
-      <div class="fab-global-stack" aria-label="Ações rápidas de lançamentos">
+      <div
+        class="fab-global-stack"
+        [class.fab-global-stack--open]="fabMenuOpen()"
+        aria-label="Ações rápidas de lançamentos"
+      >
+        <div
+          class="fab-global-options"
+          (mouseenter)="openFabMenu()"
+          (mouseleave)="scheduleCloseFabMenu()"
+        >
+          <div class="fab-option-row">
+            <span class="fab-option-label" aria-hidden="true">Incluir despesa</span>
+            <button
+              mat-fab
+              color="accent"
+              type="button"
+              class="fab-global fab-global--expense"
+              (click)="openFabExpense()"
+              matTooltipPosition="left"
+              aria-label="Incluir Despesa"
+            >
+              <mat-icon>arrow_downward</mat-icon>
+            </button>
+          </div>
+          <div class="fab-option-row">
+            <span class="fab-option-label" aria-hidden="true">Incluir receita</span>
+            <button
+              mat-fab
+              color="accent"
+              type="button"
+              class="fab-global fab-global--income"
+              (click)="openFabIncome()"
+              matTooltipPosition="left"
+              aria-label="Incluir Receita"
+            >
+              <mat-icon>arrow_upward</mat-icon>
+            </button>
+          </div>
+        </div>
         <button
           mat-fab
           color="accent"
           type="button"
           class="fab-global fab-global--main"
+          matTooltip="Nova transação"
           matTooltipPosition="left"
+          aria-label="Abrir menu de lançamentos"
+          [attr.aria-expanded]="fabMenuOpen()"
+          (mouseenter)="openFabMenu()"
+          (mouseleave)="scheduleCloseFabMenu()"
         >
           <mat-icon>add</mat-icon>
         </button>
-        <div class="fab-option-row fab-global--option">
-          <span class="fab-option-label" aria-hidden="true">Incluir despesa</span>
-          <button
-            mat-fab
-            color="accent"
-            type="button"
-            class="fab-global fab-global--expense"
-            (click)="openFabExpense()"
-            matTooltipPosition="left"
-            aria-label="Incluir Despesa"
-          >
-            <mat-icon>arrow_downward</mat-icon>
-          </button>
-        </div>
-        <div class="fab-option-row fab-global--option">
-          <span class="fab-option-label" aria-hidden="true">Incluir receita</span>
-          <button
-            mat-fab
-            color="accent"
-            type="button"
-            class="fab-global fab-global--income"
-            (click)="openFabIncome()"
-            matTooltipPosition="left"
-            aria-label="Incluir Receita"
-          >
-            <mat-icon>arrow_upward</mat-icon>
-          </button>
-        </div>
       </div>
     }
   </div>

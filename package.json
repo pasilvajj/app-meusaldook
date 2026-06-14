@@ -10,7 +10,7 @@
     "test": "ng test",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
-    "openapi:types": "openapi-typescript http://127.0.0.1:8080/v3/api-docs -o src/app/core/generated/schema.d.ts",
+    "openapi:types": "openapi-typescript http://127.0.0.1:8081/v3/api-docs -o src/app/core/generated/schema.d.ts",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium"
   },

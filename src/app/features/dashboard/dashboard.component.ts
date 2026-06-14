@@ -26,12 +26,22 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
 import { MonthlySummaryResponse } from '../../core/models/summary.models';
 import { TransactionResponse } from '../../core/models/transaction.models';
 import type { BudgetGoalMonthResponse } from '../../core/models/budget-goal.models';
 import { TransactionFormDialogService } from '../transactions/transaction-form-dialog.service';
+import { installmentDeleteConfirmMessage } from '../transactions/installment-utils';
+import {
+  canMarkExpensePaid,
+  fixedExpenseDeleteConfirmMessage,
+  isFixedExpense,
+  markExpensePaid$,
+  resolveExpenseEditDialogData,
+} from '../transactions/fixed-expense-utils';
+import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
 import { DashboardPayablesFabService } from '../../core/services/dashboard-payables-fab.service';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
@@ -88,6 +98,7 @@ export interface MetasDespesaTotal {
     MatIconModule,
     MatMenuModule,
     MatCheckboxModule,
+    MatSnackBarModule,
     RouterLink,
     DecimalPipe,
     DatePipe,
@@ -99,9 +110,11 @@ export interface MetasDespesaTotal {
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly txApi = inject(TransactionApiService);
+  private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
   private readonly loadTrigger$ = new Subject<void>();
   private readonly payablesFab = inject(DashboardPayablesFabService);
+  private readonly snack = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
 
@@ -243,7 +256,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   editPayable(row: TransactionResponse): void {
-    this.txDialog.openExpense({ transactionId: row.id }).subscribe();
+    this.txDialog.openExpense(resolveExpenseEditDialogData(row)).subscribe();
+  }
+
+  markPayablePaid(row: TransactionResponse): void {
+    if (!canMarkExpensePaid(row)) return;
+    markExpensePaid$(this.txApi, row).subscribe({
+      next: () => this.loadDashboard(),
+      error: () => this.notifyActionError('Não foi possível marcar como paga.'),
+    });
   }
 
   editReceivable(row: TransactionResponse): void {
@@ -251,13 +272,55 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   removePayable(row: TransactionResponse): void {
-    if (!confirm('Eliminar esta despesa agendada?')) return;
-    this.txApi.delete(row.id).subscribe(() => this.loadDashboard());
+    if (isFixedExpense(row)) {
+      if (!confirm(fixedExpenseDeleteConfirmMessage(row))) return;
+      const req$ = row.recurringId
+        ? this.recurringApi.delete(row.recurringId)
+        : row.sourceTransactionId
+          ? this.txApi.delete(row.sourceTransactionId)
+          : row.id > 0
+            ? this.txApi.delete(row.id)
+            : null;
+      if (!req$) return;
+      req$.subscribe({
+        next: () => this.loadDashboard(),
+        error: () => this.notifyActionError('Não foi possível excluir a despesa fixa.'),
+      });
+      return;
+    }
+    if (!confirm(installmentDeleteConfirmMessage(row, 'Eliminar esta despesa agendada?'))) return;
+    this.txApi.delete(row.id).subscribe({
+      next: () => this.loadDashboard(),
+      error: () => this.notifyActionError('Não foi possível excluir o lançamento.'),
+    });
   }
 
   removeReceivable(row: TransactionResponse): void {
-    if (!confirm('Eliminar esta receita agendada?')) return;
-    this.txApi.delete(row.id).subscribe(() => this.loadDashboard());
+    if (isFixedExpense(row)) {
+      if (!confirm(fixedExpenseDeleteConfirmMessage(row))) return;
+      const req$ = row.recurringId
+        ? this.recurringApi.delete(row.recurringId)
+        : row.sourceTransactionId
+          ? this.txApi.delete(row.sourceTransactionId)
+          : row.id > 0
+            ? this.txApi.delete(row.id)
+            : null;
+      if (!req$) return;
+      req$.subscribe({
+        next: () => this.loadDashboard(),
+        error: () => this.notifyActionError('Não foi possível excluir a despesa fixa.'),
+      });
+      return;
+    }
+    if (!confirm(installmentDeleteConfirmMessage(row, 'Eliminar esta receita agendada?'))) return;
+    this.txApi.delete(row.id).subscribe({
+      next: () => this.loadDashboard(),
+      error: () => this.notifyActionError('Não foi possível excluir o lançamento.'),
+    });
+  }
+
+  private notifyActionError(message: string): void {
+    this.snack.open(message, 'Fechar', { duration: 6000 });
   }
 
   private loadDashboard(): void {

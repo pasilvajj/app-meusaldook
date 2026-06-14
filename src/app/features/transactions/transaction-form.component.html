@@ -56,7 +56,7 @@
                 mat-icon-button
                 matSuffix
                 type="button"
-                matTooltip="Única: um lançamento. Parcelada: várias prestações. Fixa: recorrente (em desenvolvimento)."
+                matTooltip="Única: um lançamento. Parcelada: várias prestações com fim. Fixa: repete automaticamente nos meses seguintes."
                 aria-label="Ajuda sobre repetição"
               >
                 <mat-icon>help_outline</mat-icon>
@@ -132,12 +132,14 @@
             </mat-form-field>
           </div>
 
-          <div class="tx-exp-row">
-            <mat-form-field appearance="outline" class="tx-field tx-field--full">
-              <mat-label>Tags</mat-label>
-              <input matInput type="text" formControlName="tags" placeholder="ex.: mercado, fixo" autocomplete="off" />
-            </mat-form-field>
-          </div>
+          @if (showPayablesOption()) {
+            <div class="tx-exp-row tx-exp-row--payables-opt">
+              <mat-checkbox formControlName="showInPayables" color="primary">
+                Exibir no card Contas a pagar
+              </mat-checkbox>
+              <span class="tx-payables-hint">Despesas agendadas neste mês aparecem no dashboard.</span>
+            </div>
+          }
         </div>
 
         @if (error()) {
@@ -148,7 +150,15 @@
 
     <mat-dialog-actions class="tx-dlg-actions tx-dlg-actions--expense" align="end">
       <div class="tx-dlg-actions-left">
-        <button mat-icon-button type="button" class="tx-foot-icon tx-foot-icon--on" matTooltip="Pago (em breve)" (click)="$event.preventDefault()">
+        <button
+          mat-icon-button
+          type="button"
+          class="tx-foot-icon"
+          [class.tx-foot-icon--on]="expensePaymentConfirmed()"
+          [disabled]="isEditingRecurring()"
+          [matTooltip]="expensePaymentConfirmed() ? 'Pagamento confirmado' : 'Pagamento pendente'"
+          (click)="togglePaymentConfirmed(); $event.preventDefault()"
+        >
           <mat-icon>check_circle</mat-icon>
         </button>
         <button mat-icon-button type="button" class="tx-foot-icon" matTooltip="Reconciliado (em breve)" disabled>

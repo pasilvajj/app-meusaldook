@@ -208,6 +208,21 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.tx-exp-row--payables-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.15rem 0 0.35rem;
+}
+
+.tx-payables-hint {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+  padding-left: 2rem;
+}
+
 @media (max-width: 640px) {
   .tx-exp-row--3 {
     grid-template-columns: 1fr;

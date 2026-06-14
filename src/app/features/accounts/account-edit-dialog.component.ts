@@ -12,6 +12,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { startWith } from 'rxjs/operators';
 import { AccountApiService } from '../../core/services/account-api.service';
+import {
+  centsFromAmountInputEvent,
+  formatBrlAmountInput,
+} from '../../core/utils/brl-money-input';
 import { writeDtoFromUi } from './account-api.mapper';
 import {
   ACCOUNT_TYPE_OPTIONS,
@@ -50,6 +54,10 @@ export class AccountEditDialogComponent {
   readonly considerOptions = CONSIDER_BALANCE_OPTIONS;
   readonly saving = signal(false);
 
+  private readonly initialAmount = Math.abs(this.data.account.initialBalanceAmount ?? 0);
+  readonly balanceAmountCents = signal(Math.round(this.initialAmount * 100));
+  readonly balanceAmountText = signal(formatBrlAmountInput(this.initialAmount));
+
   readonly form = this.fb.nonNullable.group({
     accountType: [this.data.account.accountType ?? 'CHECKING', Validators.required],
     currency: [(this.data.account.currency ?? 'BRL') as 'BRL', Validators.required],
@@ -72,7 +80,23 @@ export class AccountEditDialogComponent {
     return `Saldo em ${d}/${m}/${y} (R$)`;
   });
 
+  onBalanceAmountInput(ev: Event): void {
+    const cents = centsFromAmountInputEvent(ev, this.balanceAmountCents());
+    this.balanceAmountCents.set(cents);
+    const amount = cents / 100;
+    this.balanceAmountText.set(formatBrlAmountInput(amount));
+    this.form.controls.initialBalanceAmount.setValue(amount);
+  }
+
+  onBalanceAmountBlur(): void {
+    const amount = this.balanceAmountCents() / 100;
+    this.form.controls.initialBalanceAmount.setValue(amount);
+    this.balanceAmountText.set(formatBrlAmountInput(amount));
+    this.form.controls.initialBalanceAmount.markAsTouched();
+  }
+
   save(): void {
+    this.onBalanceAmountBlur();
     if (this.form.invalid || this.saving()) {
       this.form.markAllAsTouched();
       return;
