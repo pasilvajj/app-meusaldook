@@ -21,6 +21,17 @@ mat-card {
   margin: 0 0 0.75rem;
 }
 
+.hint {
+  color: #555;
+  margin: 0 0 1rem;
+  line-height: 1.45;
+}
+
+.success {
+  color: #0d6e4f;
+  margin: 0 0 0.75rem;
+}
+
 form {
   display: flex;
   flex-direction: column;

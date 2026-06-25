@@ -135,7 +135,7 @@ export class DefineGoalsDialogComponent implements OnInit {
         },
         error: () => {
           this.saving.set(false);
-          this.snack.open('Não foi possível guardar as metas.', 'OK', { duration: 4000 });
+          this.snack.open('Não foi possível salvar as metas.', 'OK', { duration: 4000 });
         },
       });
   }

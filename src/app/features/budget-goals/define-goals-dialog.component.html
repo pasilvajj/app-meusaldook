@@ -68,6 +68,6 @@
     <button mat-button type="button" class="link-edit" (click)="toggleTotalEditor()">Editar total</button>
   </div>
   <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid || saving()">
-    {{ saving() ? 'A guardar…' : 'Salvar' }}
+    {{ saving() ? 'Salvando…' : 'Salvar' }}
   </button>
 </mat-dialog-actions>

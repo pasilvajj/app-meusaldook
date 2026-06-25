@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth.models';
+import { AuthResponse, ForgotPasswordRequest, LoginRequest, MessageResponse, RegisterRequest, ResetPasswordRequest } from '../models/auth.models';
 import type { MeResponse } from '../models/me.models';
 
 const TOKEN_KEY = 'finance_access_token';
@@ -37,7 +37,7 @@ export class AuthService {
       const local = email.split('@')[0];
       return local || email;
     }
-    return 'Utilizador';
+    return 'Usuário';
   });
 
   login(body: LoginRequest): Observable<AuthResponse> {
@@ -50,6 +50,14 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.baseUrl}/api/v1/auth/register`, body).pipe(
       tap((res) => this.persistToken(res.accessToken)),
     );
+  }
+
+  requestPasswordReset(body: ForgotPasswordRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.baseUrl}/api/v1/auth/forgot-password`, body);
+  }
+
+  resetPassword(body: ResetPasswordRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.baseUrl}/api/v1/auth/reset-password`, body);
   }
 
   logout(): void {

@@ -1,5 +1,5 @@
 <div class="acct">
-  <aside class="acct-side" aria-label="Secções de configurações">
+  <aside class="acct-side" aria-label="Seções de configurações">
     <div class="acct-side-avatar" aria-hidden="true">{{ userInitials() }}</div>
 
     <nav class="acct-side-nav">
@@ -10,7 +10,7 @@
         Plano e pagamentos
       </button>
       <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'usuarios'" (click)="setNav('usuarios')">
-        Utilizadores
+        Usuários
       </button>
       <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'auditoria'" (click)="setNav('auditoria')">
         Trilha de auditoria
@@ -37,7 +37,7 @@
       @if (loading()) {
         <div class="acct-loading" aria-busy="true" aria-live="polite">
           <mat-spinner diameter="40" />
-          <span>A carregar perfil…</span>
+          <span>Carregando perfil…</span>
         </div>
       } @else {
       <mat-card class="acct-card" appearance="outlined">
@@ -119,7 +119,7 @@
             </div>
           </mat-tab>
 
-          <mat-tab label="Contacto">
+          <mat-tab label="Contato">
             <div class="acct-tab-pane">
               <form [formGroup]="contactForm" id="acct-contact-form" class="acct-form-stack" (ngSubmit)="saveContact()">
                 <mat-form-field appearance="outline" class="acct-field">
@@ -184,7 +184,7 @@
           </section>
 
           <section class="acct-subscribe-block">
-            <h3>Escolher período</h3>
+            <h3>Selecionar período</h3>
             <label class="acct-radio-line">
               <input type="radio" name="period" [checked]="selectedPeriod() === 'ANUAL'" (change)="choosePeriod('ANUAL')" />
               <span>Anual</span>

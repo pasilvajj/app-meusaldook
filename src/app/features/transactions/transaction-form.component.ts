@@ -801,7 +801,7 @@ export class TransactionFormComponent implements OnInit {
           void this.router.navigateByUrl('/transactions');
         }
       },
-      error: () => this.error.set('Erro ao guardar.'),
+      error: () => this.error.set('Erro ao salvar.'),
     });
   }
 

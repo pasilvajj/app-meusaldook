@@ -20,7 +20,7 @@
             <mat-icon>chevron_right</mat-icon>
           </button>
           <mat-icon class="muted period-cal">calendar_month</mat-icon>
-          <button mat-icon-button type="button" aria-label="Definições" disabled>
+          <button mat-icon-button type="button" aria-label="Configurações" disabled>
             <mat-icon>settings</mat-icon>
           </button>
         </mat-card>
@@ -112,7 +112,7 @@
           <mat-card class="panel empty-panel" appearance="outlined">
             <mat-icon class="big muted">category</mat-icon>
             <p class="empty-title">Sem categorias</p>
-            <p class="muted">Cria categorias de {{ tabIndex() === 0 ? 'despesa' : 'receita' }} para definires metas.</p>
+            <p class="muted">Crie categorias de {{ tabIndex() === 0 ? 'despesa' : 'receita' }} para definir metas.</p>
             <a mat-flat-button color="primary" routerLink="/categories">Gerir categorias</a>
           </mat-card>
         } @else {

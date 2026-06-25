@@ -17,7 +17,7 @@ export function isProjectedFixedExpense(tx: TransactionResponse): boolean {
 }
 
 export function fixedExpenseDeleteConfirmMessage(tx: TransactionResponse): string {
-  return 'Esta é uma despesa fixa. Eliminar a regra e deixar de exibir todas as ocorrências?';
+  return 'Esta é uma despesa fixa. Excluir a regra e deixar de exibir todas as ocorrências?';
 }
 
 export interface FixaMeta {

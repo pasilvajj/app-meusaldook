@@ -1,7 +1,7 @@
 @if (loading()) {
   <div class="dash-loading">
     <mat-spinner diameter="44" />
-    <span>A carregar a tua visão geral…</span>
+    <span>Carregando sua visão geral…</span>
   </div>
 } @else {
   @if (data(); as d) {
@@ -92,7 +92,7 @@
               <p class="ap-empty-secondary">Contas a pagar são despesas agendadas e ainda não pagas.</p>
               <div class="ap-actions">
                 <button mat-flat-button type="button" class="ap-btn-mint" (click)="openNewTransactionModal()">Incluir despesa</button>
-                <a class="ap-link-mint" routerLink="/transactions" aria-label="Ver movimentações">Ver movimentações</a>
+                <a class="ap-link-mint" routerLink="/transactions" aria-label="Ver transações">Ver transações</a>
               </div>
             </div>
           } @else {
@@ -145,7 +145,7 @@
               <p class="ar-empty-secondary">Contas a receber são receitas agendadas com data futura (ainda não confirmadas no caixa).</p>
               <div class="ar-actions">
                 <button mat-flat-button type="button" class="ar-btn-teal" (click)="openNewIncomeModal()">Incluir receita</button>
-                <a class="ar-link-teal" routerLink="/transactions" aria-label="Ver movimentações">Ver movimentações</a>
+                <a class="ar-link-teal" routerLink="/transactions" aria-label="Ver transações">Ver transações</a>
               </div>
             </div>
           } @else {
@@ -338,7 +338,7 @@
         }
         <button mat-menu-item type="button" (click)="removePayable(row)">
           <mat-icon color="warn">delete_outline</mat-icon>
-          <span>Eliminar</span>
+          <span>Excluir</span>
         </button>
       </ng-template>
     </mat-menu>
@@ -351,7 +351,7 @@
         </button>
         <button mat-menu-item type="button" (click)="removeReceivable(row)">
           <mat-icon color="warn">delete_outline</mat-icon>
-          <span>Eliminar</span>
+          <span>Excluir</span>
         </button>
       </ng-template>
     </mat-menu>

@@ -186,7 +186,7 @@
           form="tx-form-expense"
           class="tx-save-plus"
           [disabled]="form.invalid || amountBelowMin()"
-          aria-label="Guardar"
+          aria-label="Salvar"
         >
           <mat-icon>add</mat-icon>
         </button>
@@ -237,7 +237,7 @@
     <mat-dialog-actions class="tx-dlg-actions" align="end">
       <button mat-button type="button" mat-dialog-close>Cancelar</button>
       <button mat-flat-button color="primary" type="submit" form="tx-dialog-form" [disabled]="form.invalid">
-        Guardar
+        Salvar
       </button>
     </mat-dialog-actions>
   } @else {
@@ -277,7 +277,7 @@
       @if (error()) {
         <p class="error">{{ error() }}</p>
       }
-      <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Guardar</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">Salvar</button>
     </form>
   }
 }

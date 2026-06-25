@@ -288,7 +288,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    if (!confirm(installmentDeleteConfirmMessage(row, 'Eliminar esta despesa agendada?'))) return;
+    if (!confirm(installmentDeleteConfirmMessage(row, 'Excluir esta despesa agendada?'))) return;
     this.txApi.delete(row.id).subscribe({
       next: () => this.loadDashboard(),
       error: () => this.notifyActionError('Não foi possível excluir o lançamento.'),
@@ -312,7 +312,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    if (!confirm(installmentDeleteConfirmMessage(row, 'Eliminar esta receita agendada?'))) return;
+    if (!confirm(installmentDeleteConfirmMessage(row, 'Excluir esta receita agendada?'))) return;
     this.txApi.delete(row.id).subscribe({
       next: () => this.loadDashboard(),
       error: () => this.notifyActionError('Não foi possível excluir o lançamento.'),

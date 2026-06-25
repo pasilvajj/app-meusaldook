@@ -125,7 +125,7 @@ export class AccountEditDialogComponent {
       },
       error: () => {
         this.saving.set(false);
-        this.snack.open('Não foi possível guardar as alterações.', 'Fechar', { duration: 5000 });
+        this.snack.open('Não foi possível salvar as alterações.', 'Fechar', { duration: 5000 });
       },
     });
   }

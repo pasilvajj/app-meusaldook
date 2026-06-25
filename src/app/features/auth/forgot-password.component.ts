@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
-  selector: 'app-register',
+  selector: 'app-forgot-password',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -18,37 +18,43 @@ import { AuthService } from '../../core/services/auth.service';
     MatButtonModule,
     RouterLink,
   ],
-  templateUrl: './register.component.html',
-  styleUrl: './register.component.scss',
+  templateUrl: './forgot-password.component.html',
+  styleUrl: './login.component.scss',
 })
-export class RegisterComponent {
+export class ForgotPasswordComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
   readonly error = signal<string | null>(null);
+  readonly success = signal<string | null>(null);
+  readonly submitting = signal(false);
 
   readonly form = this.fb.nonNullable.group({
-    fullName: ['', [Validators.required, Validators.maxLength(255)]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
   });
 
   submit(): void {
     this.error.set(null);
+    this.success.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.auth.register(this.form.getRawValue()).subscribe({
-      next: () => void this.router.navigateByUrl('/dashboard'),
-      error: (err) => {
-        if (err.status === 409) {
-          this.error.set('Este email já está cadastrado.');
-        } else {
-          this.error.set('Não foi possível concluir o cadastro.');
-        }
+    this.submitting.set(true);
+    this.auth.requestPasswordReset(this.form.getRawValue()).subscribe({
+      next: (res) => {
+        this.success.set(res.message);
+        this.submitting.set(false);
+      },
+      error: () => {
+        this.error.set('Não foi possível processar o pedido. Tente novamente.');
+        this.submitting.set(false);
       },
     });
+  }
+
+  backToLogin(): void {
+    void this.router.navigateByUrl('/auth/login');
   }
 }

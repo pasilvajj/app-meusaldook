@@ -158,7 +158,7 @@ export class AccountSettingsPageComponent implements OnInit {
       case 'assinatura':
         return 'Assinatura do plano';
       case 'usuarios':
-        return 'Utilizadores';
+        return 'Usuários';
       case 'auditoria':
         return 'Trilha de auditoria';
       case 'notificacoes':
@@ -176,7 +176,7 @@ export class AccountSettingsPageComponent implements OnInit {
     if (nav === 'resetar') {
       if (
         !confirm(
-          'Recarregar o perfil a partir do servidor? Alterações não guardadas neste dispositivo serão descartadas.',
+          'Recarregar o perfil a partir do servidor? Alterações não salvas neste dispositivo serão descartadas.',
         )
       )
         return;
@@ -227,9 +227,9 @@ export class AccountSettingsPageComponent implements OnInit {
         next: (me) => {
           this.auth.hydrateFromMeResponse(me);
           this.applyMeToForms(me);
-          this.snack.open('Informações gravadas.', 'OK', { duration: 2600 });
+          this.snack.open('Informações salvas.', 'OK', { duration: 2600 });
         },
-        error: () => this.snack.open('Não foi possível gravar as informações.', 'OK', { duration: 4000 }),
+        error: () => this.snack.open('Não foi possível salvar as informações.', 'OK', { duration: 4000 }),
       });
   }
 
@@ -251,9 +251,9 @@ export class AccountSettingsPageComponent implements OnInit {
       .subscribe({
         next: (me) => {
           this.applyMeToForms(me);
-          this.snack.open('Endereço gravado.', 'OK', { duration: 2600 });
+          this.snack.open('Endereço salvo.', 'OK', { duration: 2600 });
         },
-        error: () => this.snack.open('Não foi possível gravar o endereço.', 'OK', { duration: 4000 }),
+        error: () => this.snack.open('Não foi possível salvar o endereço.', 'OK', { duration: 4000 }),
       });
   }
 
@@ -266,9 +266,9 @@ export class AccountSettingsPageComponent implements OnInit {
     this.meApi.patchContact({ phone: phone.length ? phone : null }).subscribe({
       next: (me) => {
         this.applyMeToForms(me);
-        this.snack.open('Contacto gravado.', 'OK', { duration: 2600 });
+        this.snack.open('Contato salvo.', 'OK', { duration: 2600 });
       },
-      error: () => this.snack.open('Não foi possível gravar o contacto.', 'OK', { duration: 4000 }),
+      error: () => this.snack.open('Não foi possível salvar o contato.', 'OK', { duration: 4000 }),
     });
   }
 

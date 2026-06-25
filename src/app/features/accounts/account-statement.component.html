@@ -2,7 +2,7 @@
 @if (loading()) {
   <div class="st-loading">
     <mat-spinner diameter="40" />
-    <span>A carregar extrato…</span>
+    <span>Carregando extrato…</span>
   </div>
 } @else {
   <div class="st-layout">
@@ -35,7 +35,7 @@
           <div class="st-date-center">
             <span class="st-date-title">{{ monthNavLabel() }}</span>
             <div class="st-date-actions">
-              <button mat-icon-button type="button" (click)="goTodayMonth()" aria-label="Ir para o mês actual" matTooltip="Mês actual">
+              <button mat-icon-button type="button" (click)="goTodayMonth()" aria-label="Ir para o mês atual" matTooltip="Mês atual">
                 <mat-icon>calendar_today</mat-icon>
               </button>
               <button mat-icon-button type="button" aria-label="Configurações" matTooltip="Em breve" (click)="filterSoon()">
@@ -82,8 +82,8 @@
           </div>
           <div class="st-toolbar-icons">
             <button mat-icon-button type="button" matTooltip="Em breve" disabled aria-label="Pastas"><mat-icon>folder</mat-icon></button>
-            <button mat-icon-button type="button" (click)="filterSoon()" aria-label="Definições" matTooltip="Definições"><mat-icon>settings</mat-icon></button>
-            <button mat-icon-button type="button" matTooltip="Ecrã completo" aria-label="Ecrã completo" disabled><mat-icon>fullscreen</mat-icon></button>
+            <button mat-icon-button type="button" (click)="filterSoon()" aria-label="Configurações" matTooltip="Configurações"><mat-icon>settings</mat-icon></button>
+            <button mat-icon-button type="button" matTooltip="Tela cheia" aria-label="Tela cheia" disabled><mat-icon>fullscreen</mat-icon></button>
             <button mat-icon-button type="button" (click)="exportCsv()" aria-label="Exportar" matTooltip="Exportar CSV"><mat-icon>download</mat-icon></button>
             <button
               mat-icon-button
@@ -141,7 +141,7 @@
               </span>
             </div>
           } @empty {
-            <p class="st-empty">Sem movimentos neste mês.</p>
+            <p class="st-empty">Sem transações neste mês.</p>
           }
         </mat-card-content>
       </mat-card>

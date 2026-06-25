@@ -40,7 +40,7 @@
       } @else {
         <mat-card class="cat-table-card" appearance="outlined">
           @if (displayedRows().length === 0) {
-            <div class="cat-empty">Sem categorias deste tipo. Utiliza o botão + para criar.</div>
+            <div class="cat-empty">Sem categorias deste tipo. Use o botão + para criar.</div>
           } @else {
             <table mat-table [dataSource]="displayedRows()" class="cat-table">
               <ng-container matColumnDef="name">

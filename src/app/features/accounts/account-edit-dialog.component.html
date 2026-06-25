@@ -22,7 +22,7 @@
           type="button"
           tabindex="-1"
           class="acc-help-btn"
-          matTooltip="Conta corrente, cartão, dinheiro ou outros activos (MVP local)."
+          matTooltip="Conta corrente, cartão, dinheiro ou outros ativos (MVP local)."
           aria-label="Ajuda sobre tipo de conta"
         >
           <mat-icon>help_outline</mat-icon>
@@ -41,7 +41,7 @@
       <input matInput formControlName="name" required maxlength="120" autocomplete="off" />
       <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">savings</mat-icon>
       @if (form.controls.name.hasError('required') && form.controls.name.touched) {
-        <mat-error>Indica um nome para a conta</mat-error>
+        <mat-error>Informe um nome para a conta</mat-error>
       }
     </mat-form-field>
 
@@ -59,7 +59,7 @@
         <mat-icon>help_outline</mat-icon>
       </button>
       @if (form.controls.initialBalanceDate.hasError('required') && form.controls.initialBalanceDate.touched) {
-        <mat-error>Indica a data</mat-error>
+        <mat-error>Informe a data</mat-error>
       }
     </mat-form-field>
 

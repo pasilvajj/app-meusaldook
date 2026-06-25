@@ -18,14 +18,14 @@ export function isInstallmentTransaction(tx: TransactionResponse): boolean {
 
 export function installmentDeleteConfirmMessage(
   tx: TransactionResponse,
-  fallback = 'Eliminar esta transação?',
+  fallback = 'Excluir esta transação?',
 ): string {
   const info = parseInstallmentFromDescription(tx.description);
   if (tx.installmentGroupId || info) {
     const total = info?.totalParcels;
     return total
-      ? `Esta despesa faz parte de um parcelamento. Eliminar todas as ${total} parcelas?`
-      : 'Esta despesa faz parte de um parcelamento. Eliminar todas as parcelas?';
+      ? `Esta despesa faz parte de um parcelamento. Excluir todas as ${total} parcelas?`
+      : 'Esta despesa faz parte de um parcelamento. Excluir todas as parcelas?';
   }
   return fallback;
 }
