@@ -185,6 +185,13 @@
   --mdc-fab-icon-color: #fff;
 }
 
+@media (max-width: 768px) {
+  .contas-fab {
+    right: 1rem;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 640px) {
   .contas-toolbar-actions {
     width: 100%;

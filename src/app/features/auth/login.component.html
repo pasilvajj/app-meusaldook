@@ -12,7 +12,23 @@
         </mat-form-field>
         <mat-form-field appearance="outline" class="full">
           <mat-label>Senha</mat-label>
-          <input matInput type="password" formControlName="password" autocomplete="current-password" />
+          <input
+            matInput
+            [type]="hidePassword() ? 'password' : 'text'"
+            formControlName="password"
+            autocomplete="current-password"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            class="password-toggle"
+            [attr.aria-label]="hidePassword() ? 'Mostrar senha' : 'Ocultar senha'"
+            [attr.aria-pressed]="!hidePassword()"
+            (click)="hidePassword.set(!hidePassword())"
+          >
+            <mat-icon>{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
           @if (form.controls.password.touched && form.controls.password.invalid) {
             <mat-error>Mínimo 8 caracteres</mat-error>
           }

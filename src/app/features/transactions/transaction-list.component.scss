@@ -41,6 +41,21 @@
   }
 }
 
+@media (max-width: 768px) {
+  .tx-page {
+    padding-bottom: 0.5rem;
+  }
+
+  .tx-summary {
+    gap: 0.55rem;
+  }
+
+  .tx-period-card,
+  .tx-account-card {
+    padding: 0.55rem 0.65rem !important;
+  }
+}
+
 .tx-summary {
   display: grid;
   gap: 0.7rem;

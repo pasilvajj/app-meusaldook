@@ -5,6 +5,35 @@ body {
   height: 100%;
   margin: 0;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (max-width: 768px) {
+  .cdk-overlay-container .cdk-overlay-pane .mat-mdc-menu-panel.shell-user-menu-panel,
+  .cdk-overlay-container .cdk-overlay-pane .mdc-menu-surface.mat-mdc-menu-panel.shell-user-menu-panel {
+    width: min(340px, calc(100vw - 1.5rem)) !important;
+    max-width: calc(100vw - 1.5rem) !important;
+  }
+
+  .shell-user-menu__top {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.1rem 1rem 0.85rem;
+  }
+
+  .shell-user-menu__meta {
+    align-items: center;
+    width: 100%;
+  }
+
+  .shell-user-menu__btn-wide {
+    width: 100% !important;
+  }
+
+  .shell-user-menu__identity {
+    max-width: 10rem;
+  }
 }
 
 .cdk-overlay-container {
@@ -480,10 +509,12 @@ body {
   body.tx-print-active .app-frame .rail,
   body.tx-print-active .app-frame .topbar,
   body.tx-print-active .app-frame .fab-global-stack,
+  body.tx-print-active .app-frame .bottom-nav,
   body.tx-print-active .tx-screen,
   body.st-print-active .app-frame .rail,
   body.st-print-active .app-frame .topbar,
   body.st-print-active .app-frame .fab-global-stack,
+  body.st-print-active .app-frame .bottom-nav,
   body.st-print-active .st-screen {
     display: none !important;
   }

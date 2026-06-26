@@ -25,6 +25,32 @@
 @media (max-width: 900px) {
   .cat-workspace {
     grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .cat-sidebar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0.5rem;
+    padding-bottom: 0.15rem;
+  }
+
+  .cat-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cat-filter-card {
+    flex: 0 0 auto;
+    min-width: 9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cat-page {
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -179,6 +205,13 @@
   box-shadow:
     0 12px 28px rgba(13, 148, 136, 0.38),
     0 2px 8px rgba(15, 23, 42, 0.12) !important;
+}
+
+@media (max-width: 768px) {
+  .cat-fab {
+    right: 1rem;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (min-width: 1200px) {

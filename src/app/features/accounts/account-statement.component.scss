@@ -331,6 +331,7 @@ mat-card-header mat-card-title {
 @media (max-width: 1024px) {
   .st-layout {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .st-legend {
@@ -344,15 +345,73 @@ mat-card-header mat-card-title {
   }
 
   .st-toolbar {
-    grid-template-columns: auto auto;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .st-account-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 0.55rem 0.65rem !important;
+  }
+
+  .st-account-bar > button:last-of-type {
+    display: none;
+  }
+
+  .st-date-bar {
+    padding: 0.5rem 0.35rem !important;
+  }
+
+  .st-sit-head,
+  .st-sit-row {
+    font-size: 0.8rem;
+    gap: 0.35rem;
+  }
+
+  .st-sit-head {
+    font-size: 0.68rem;
+  }
+
+  .st-toolbar {
+    grid-template-columns: 1fr;
+    padding: 0.55rem 0.65rem 0.5rem !important;
+  }
+
+  .st-filter-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .st-legend {
+    gap: 0.45rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  .st-toolbar-icons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  mat-card-header mat-card-title {
+    font-size: 0.88rem !important;
+    line-height: 1.3;
   }
 }
 
 @media (max-width: 640px) {
   .st-row {
-    grid-template-columns: 24px 56px minmax(0, 1fr) 28px 88px 88px;
-    font-size: 0.8rem;
+    grid-template-columns: 22px 52px minmax(0, 1fr) 24px 76px 76px;
+    font-size: 0.76rem;
+    gap: 0.25rem 0.35rem;
+  }
+
+  .st-chip {
+    font-size: 0.62rem;
+    height: 14px;
+    line-height: 14px;
   }
 }
 

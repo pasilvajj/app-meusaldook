@@ -1,39 +1,62 @@
-<div class="app-frame">
-  <aside class="rail" aria-label="Navegação principal">
-    <a class="rail-brand" routerLink="/dashboard" aria-label="Início">R$</a>
+<div class="app-frame" [class.app-frame--rail-open]="railOpen()">
+  @if (railOpen()) {
+    <button
+      type="button"
+      class="rail-backdrop"
+      aria-label="Fechar menu"
+      (click)="closeRail()"
+    ></button>
+  }
+
+  <aside class="rail" [class.rail--open]="railOpen()" aria-label="Navegação principal">
+    <a class="rail-brand rail-brand--solo" routerLink="/dashboard" aria-label="Início" (click)="closeRail()">R$</a>
+
+    <div class="rail-drawer-head">
+      <a class="rail-brand" routerLink="/dashboard" aria-label="Início" (click)="closeRail()">R$</a>
+      <div class="rail-drawer-meta">
+        <span class="rail-drawer-eyebrow">Finanças pessoais</span>
+        <span class="rail-drawer-title">Menu</span>
+      </div>
+      <button mat-icon-button type="button" class="rail-drawer-close" aria-label="Fechar menu" (click)="closeRail()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
     <nav class="rail-nav">
-      <a
-        mat-icon-button
-        routerLink="/dashboard"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-        matTooltip="Visão geral"
-        matTooltipPosition="right"
-      >
-        <mat-icon>dashboard</mat-icon>
-      </a>
-      <a mat-icon-button routerLink="/transactions" routerLinkActive="active" matTooltip="Transações" matTooltipPosition="right">
-        <mat-icon>receipt_long</mat-icon>
-      </a>
-      <a mat-icon-button routerLink="/categories" routerLinkActive="active" matTooltip="Categorias" matTooltipPosition="right">
-        <mat-icon>category</mat-icon>
-      </a>
-      <a mat-icon-button routerLink="/contas" routerLinkActive="active" matTooltip="Contas" matTooltipPosition="right">
-        <mat-icon>account_balance_wallet</mat-icon>
-      </a>
-      <a mat-icon-button routerLink="/metas" routerLinkActive="active" matTooltip="Metas de orçamento" matTooltipPosition="right">
-        <mat-icon>flag</mat-icon>
-      </a>
+      @for (item of navItems; track item.path) {
+        <a
+          class="rail-link"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          [matTooltip]="item.label"
+          matTooltipPosition="right"
+          (click)="closeRail()"
+        >
+          <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+          <span class="rail-link__label">{{ item.label }}</span>
+        </a>
+      }
     </nav>
+
     <div class="rail-spacer"></div>
-    <div class="rail-date">{{ todayLabel() }}</div>
+
+    <div class="rail-date rail-date--solo">{{ todayLabel() }}</div>
+
+    <div class="rail-footer">
+      <a class="rail-link rail-link--sub" routerLink="/settings" routerLinkActive="active" (click)="closeRail()">
+        <mat-icon aria-hidden="true">settings</mat-icon>
+        <span class="rail-link__label">Configurações da conta</span>
+      </a>
+      <div class="rail-date rail-date--footer">{{ todayLabel() }}</div>
+    </div>
   </aside>
 
   <div class="main">
     <header class="topbar">
       <div class="topbar-left">
-        <button mat-icon-button type="button" class="ghost" aria-label="Menu">
-          <mat-icon>menu</mat-icon>
+        <button mat-icon-button type="button" class="ghost topbar-menu-btn" aria-label="Menu" (click)="toggleRail()">
+          <mat-icon>{{ railOpen() ? 'close' : 'menu' }}</mat-icon>
         </button>
         <div class="topbar-titles">
           <span class="eyebrow">Finanças pessoais</span>
@@ -43,7 +66,8 @@
       <div class="topbar-right">
         @if (showSubscribeCta()) {
           <button mat-stroked-button type="button" class="subscribe-lite" (click)="comingSoon('Assinar plano')">
-            Assinar o Meu Dinheiro
+            <span class="subscribe-lite__full">Assinar o Meu Dinheiro</span>
+            <span class="subscribe-lite__short">Assinar</span>
           </button>
           <button mat-icon-button type="button" class="ghost ghost--hide-xs" matTooltip="Visão geral" aria-label="Atalhos" routerLink="/dashboard">
             <mat-icon>dashboard</mat-icon>
@@ -65,8 +89,8 @@
         >
           <span class="user-menu-trigger__label">{{ auth.userDisplayName() }}</span>
           <mat-icon class="user-menu-trigger__caret">expand_more</mat-icon>
+          <span class="user-menu-trigger__avatar" aria-hidden="true">{{ userInitials() }}</span>
         </button>
-        <span class="user-avatar-chip" aria-hidden="true">{{ userInitials() }}</span>
 
         <mat-menu #userMenu="matMenu" xPosition="before" panelClass="shell-user-menu-panel">
           <div class="shell-user-menu" (click)="$event.stopPropagation()">
@@ -115,6 +139,21 @@
     <main class="content">
       <router-outlet />
     </main>
+
+    <nav class="bottom-nav" aria-label="Navegação rápida">
+      @for (item of navItems; track item.path) {
+        <a
+          class="bottom-nav__item"
+          [routerLink]="item.path"
+          routerLinkActive="bottom-nav__active"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          [attr.aria-label]="item.label"
+        >
+          <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+          <span class="bottom-nav__label">{{ item.shortLabel }}</span>
+        </a>
+      }
+    </nav>
 
     @if (showGlobalTransactionFab()) {
       <div

@@ -457,6 +457,7 @@
 @media (max-width: 920px) {
   .acct {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .acct-side {
@@ -464,13 +465,45 @@
     padding: 0;
   }
 
+  .acct-side-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 1.5rem;
+    margin-bottom: 0.85rem;
+  }
+
   .acct-side-nav {
     flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0.35rem;
+    padding-bottom: 0.15rem;
+    margin: 0 -0.25rem;
+    padding-inline: 0.25rem;
+  }
+
+  .acct-side-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .acct-side-footer {
+    flex-direction: row;
     flex-wrap: wrap;
+    gap: 0.35rem;
   }
 
   .acct-link {
     width: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.84rem;
+  }
+
+  .acct-divide {
+    margin: 0.65rem 0 !important;
   }
 
   .acct-form-grid {
@@ -479,6 +512,14 @@
 
   .acct-span-2 {
     grid-column: span 1;
+  }
+
+  .acct-tab-pane {
+    padding: 1rem 0.85rem 0.85rem;
+  }
+
+  .acct-card-actions {
+    padding: 0 0.85rem 1rem;
   }
 
   .acct-plan-grid {
@@ -498,5 +539,11 @@
 
   .acct-card-form-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  :host ::ng-deep .acct-tabs .mat-mdc-tab-header {
+    overflow-x: auto;
   }
 }

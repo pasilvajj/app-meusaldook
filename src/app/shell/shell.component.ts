@@ -77,7 +77,16 @@ export class ShellComponent implements OnInit, OnDestroy {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   });
 
+  readonly navItems = [
+    { path: '/dashboard', icon: 'dashboard', label: 'Visão geral', shortLabel: 'Início', exact: true },
+    { path: '/transactions', icon: 'receipt_long', label: 'Transações', shortLabel: 'Lançamentos', exact: false },
+    { path: '/categories', icon: 'category', label: 'Categorias', shortLabel: 'Categorias', exact: false },
+    { path: '/contas', icon: 'account_balance_wallet', label: 'Contas', shortLabel: 'Contas', exact: false },
+    { path: '/metas', icon: 'flag', label: 'Metas de orçamento', shortLabel: 'Metas', exact: false },
+  ] as const;
+
   readonly fabMenuOpen = signal(false);
+  readonly railOpen = signal(false);
 
   private fabCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -91,6 +100,9 @@ export class ShellComponent implements OnInit, OnDestroy {
       next: (me) => this.auth.hydrateFromMeResponse(me),
       error: () => {},
     });
+    this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe(() => {
+      this.closeRail();
+    });
   }
 
   ngOnDestroy(): void {
@@ -100,6 +112,14 @@ export class ShellComponent implements OnInit, OnDestroy {
   openFabMenu(): void {
     this.clearFabCloseTimer();
     this.fabMenuOpen.set(true);
+  }
+
+  toggleRail(): void {
+    this.railOpen.update((open) => !open);
+  }
+
+  closeRail(): void {
+    this.railOpen.set(false);
   }
 
   scheduleCloseFabMenu(): void {
@@ -135,14 +155,18 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   onUserMenuOpened(): void {
     if (typeof document === 'undefined') return;
-    const panel = document.querySelector('.shell-user-menu-panel');
-    if (!panel) return;
-    const pane = panel.closest('.cdk-overlay-pane') as HTMLElement | null;
+    const pane = document.querySelector('.shell-user-menu-panel')?.closest('.cdk-overlay-pane') as HTMLElement | null;
     if (!pane) return;
-    pane.style.zIndex = '81';
-    pane.style.transform = 'translateX(-30px) translateY(10px)';
-    pane.style.top = '44.375px';
-    pane.style.left = '1043px';
+    pane.style.zIndex = '1200';
+    if (window.innerWidth <= 768) {
+      pane.style.transform = '';
+      pane.style.top = '';
+      pane.style.left = '';
+      pane.style.right = '12px';
+    } else {
+      pane.style.right = '';
+      pane.style.transform = 'translateX(-30px) translateY(10px)';
+    }
   }
 }
 
