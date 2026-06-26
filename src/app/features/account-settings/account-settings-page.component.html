@@ -2,23 +2,25 @@
   <aside class="acct-side" aria-label="Seções de configurações">
     <div class="acct-side-avatar" aria-hidden="true">{{ userInitials() }}</div>
 
-    <nav class="acct-side-nav">
-      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'geral'" (click)="setNav('geral')">
-        Geral
-      </button>
-      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'plano'" (click)="setNav('plano')">
-        Plano e pagamentos
-      </button>
-      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'usuarios'" (click)="setNav('usuarios')">
-        Usuários
-      </button>
-      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'auditoria'" (click)="setNav('auditoria')">
-        Trilha de auditoria
-      </button>
-      <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'notificacoes'" (click)="setNav('notificacoes')">
-        Notificações
-      </button>
-    </nav>
+    <div class="acct-side-nav-wrap">
+      <nav class="acct-side-nav" aria-label="Seções principais">
+        <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'geral'" (click)="setNav('geral')">
+          Geral
+        </button>
+        <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'plano'" (click)="setNav('plano')">
+          Plano e pagamentos
+        </button>
+        <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'usuarios'" (click)="setNav('usuarios')">
+          Usuários
+        </button>
+        <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'auditoria'" (click)="setNav('auditoria')">
+          Trilha de auditoria
+        </button>
+        <button type="button" class="acct-link" [class.acct-link--active]="activeNav() === 'notificacoes'" (click)="setNav('notificacoes')">
+          Notificações
+        </button>
+      </nav>
+    </div>
 
     <mat-divider class="acct-divide" />
 

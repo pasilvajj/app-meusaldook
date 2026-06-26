@@ -144,6 +144,7 @@ export class AccountSettingsPageComponent implements OnInit {
   ngOnInit(): void {
     localStorage.removeItem(LEGACY_EXTRA_STORE_KEY);
     this.loadProfile();
+    queueMicrotask(() => this.scrollActiveNavIntoView());
   }
 
   readonly isPlaceholderSection = computed(() => {
@@ -183,6 +184,7 @@ export class AccountSettingsPageComponent implements OnInit {
       this.loadProfile();
       this.snack.open('Perfil atualizado a partir do servidor.', 'OK', { duration: 3200 });
       this.activeNav.set('geral');
+      this.scrollActiveNavIntoView();
       return;
     }
     if (nav === 'inativar') {
@@ -190,6 +192,18 @@ export class AccountSettingsPageComponent implements OnInit {
       return;
     }
     this.activeNav.set(nav);
+    this.scrollActiveNavIntoView();
+  }
+
+  private scrollActiveNavIntoView(): void {
+    if (typeof document === 'undefined' || window.innerWidth > 768) return;
+    queueMicrotask(() => {
+      document.querySelector('.acct-link--active')?.scrollIntoView({
+        inline: 'center',
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+    });
   }
 
   whyCpf(): void {
