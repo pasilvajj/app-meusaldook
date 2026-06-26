@@ -30,10 +30,13 @@ export class TransactionFormDialogService {
 
   private open(data: TransactionFormDialogData): Observable<boolean | undefined> {
     const expense = data.useExpenseLayout === true;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     return this.dialog
       .open(TransactionFormComponent, {
-        width: expense ? 'min(96vw, 520px)' : '560px',
-        maxWidth: '96vw',
+        width: expense ? (isMobile ? '100vw' : 'min(96vw, 520px)') : isMobile ? '100vw' : '560px',
+        maxWidth: '100vw',
+        maxHeight: isMobile ? '100dvh' : undefined,
+        height: isMobile && expense ? '100dvh' : undefined,
         autoFocus: 'first-tabbable',
         restoreFocus: true,
         scrollStrategy: this.overlay.scrollStrategies.block(),

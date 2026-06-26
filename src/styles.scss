@@ -128,6 +128,49 @@ body {
   max-width: 100%;
 }
 
+@media (max-width: 768px) {
+  .mat-mdc-dialog-panel.transaction-form-dialog-panel--wide {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .transaction-form-dialog-panel--wide .mat-mdc-dialog-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh;
+    max-height: 100dvh;
+    --mdc-dialog-container-shape: 0;
+  }
+
+  .transaction-form-dialog-panel--wide .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+    width: 100%;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .transaction-form-dialog-panel--wide app-transaction-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .transaction-form-dialog-panel .mat-mdc-dialog-container {
+    max-height: 100dvh;
+  }
+
+  .transaction-form-dialog-panel .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 /* Desfoque suave no fundo (referência) */
 .transaction-form-dialog-backdrop.cdk-overlay-dark-backdrop {
   backdrop-filter: blur(6px);
