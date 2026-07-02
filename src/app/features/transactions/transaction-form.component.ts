@@ -82,8 +82,9 @@ export class TransactionFormComponent implements OnInit {
   readonly allCategories = signal<CategoryResponse[]>([]);
   /** Contas para o select “Conta” no layout despesa (chave = `publicKey`). */
   readonly expenseAccountOptions = signal<
-    { publicKey: string; name: string; typeLabel: string }[]
+    { publicKey: string; name: string; typeLabel: string; accountType: AccountApiResponse['accountType'] }[]
   >([]);
+  private readonly accountsByKey = signal<Map<string, AccountApiResponse>>(new Map());
 
   expenseAccountName(publicKey: string | null | undefined): string {
     const key = publicKey ?? 'principal';
@@ -135,9 +136,15 @@ export class TransactionFormComponent implements OnInit {
 
   readonly showPayablesOption = computed(() => {
     if (!this.expenseLayout) return false;
+    if (this.isCreditCardExpenseAccount()) return false;
     if (this.editingRecurringId != null) return true;
     if (this.editingId != null) return !this.expensePaymentConfirmed();
     return this.occurredDateIsFuture() || !this.expensePaymentConfirmed();
+  });
+
+  readonly showPaymentConfirmToggle = computed(() => {
+    if (!this.expenseLayout || this.isEditingRecurring()) return false;
+    return !this.isCreditCardExpenseAccount();
   });
 
   private editingId: number | null = null;
@@ -170,11 +177,13 @@ export class TransactionFormComponent implements OnInit {
   }
 
   private applyAccountOptions(accs: AccountApiResponse[]): void {
+    this.accountsByKey.set(new Map(accs.map((a) => [a.publicKey, a])));
     this.expenseAccountOptions.set(
       accs.map((a) => ({
         publicKey: a.publicKey,
         name: a.name,
         typeLabel: accountTypeLabel(a.accountType),
+        accountType: a.accountType,
       })),
     );
     const keys = accs.map((a) => a.publicKey);
@@ -285,7 +294,7 @@ export class TransactionFormComponent implements OnInit {
       });
       this.expenseAmountCents.set(0);
       this.expenseAmountText.set(formatBrlAmountInput(0));
-      this.expensePaymentConfirmed.set(true);
+      this.syncCreditCardPaymentDefaults();
       this.updateOccurredDateIsFuture(occurredDate);
       this.form.controls.occurredAt.updateValueAndValidity({ emitEvent: false });
       this.form.controls.occurredDate.updateValueAndValidity({ emitEvent: false });
@@ -316,15 +325,37 @@ export class TransactionFormComponent implements OnInit {
       this.form.controls.installmentCount.valueChanges,
       this.form.controls.occurredDate.valueChanges,
       this.form.controls.showInPayables.valueChanges,
+      this.form.controls.accountKey.valueChanges,
     )
       .pipe(startWith(null), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.syncParcelValidators();
         this.syncAmountNumericFromUi();
         this.updateOccurredDateIsFuture(this.form.controls.occurredDate.value);
+        this.syncCreditCardPaymentDefaults();
         this.syncPayablesCheckboxWhenHidden();
         this.syncPaymentWhenPayablesChecked();
       });
+  }
+
+  private isCreditCardExpenseAccount(): boolean {
+    if (this.dialogData?.creditCardInvoiceContext) return true;
+    const key = this.form.controls.accountKey.value?.trim();
+    if (!key) return false;
+    return this.accountsByKey().get(key)?.accountType === 'CREDIT_CARD';
+  }
+
+  /** Compras no cartão ficam na fatura — não marcar como pagas na criação. */
+  private syncCreditCardPaymentDefaults(): void {
+    if (!this.isCreateExpense() || !this.expenseLayout) return;
+    if (this.isCreditCardExpenseAccount()) {
+      this.expensePaymentConfirmed.set(false);
+      this.form.controls.showInPayables.setValue(false, { emitEvent: false });
+      return;
+    }
+    if (!this.occurredDateIsFuture()) {
+      this.expensePaymentConfirmed.set(true);
+    }
   }
 
   /** Contas a pagar só faz sentido com pagamento pendente. */
@@ -404,6 +435,7 @@ export class TransactionFormComponent implements OnInit {
   }
 
   private resolveMarkAsPaidOnCreate(occurredIso: string): boolean {
+    if (this.isCreditCardExpenseAccount()) return false;
     if (!this.isCreateExpense() || !this.expensePaymentConfirmed()) return false;
     const when = new Date(occurredIso);
     if (Number.isNaN(when.getTime())) return true;
@@ -784,6 +816,7 @@ export class TransactionFormComponent implements OnInit {
             ...installment,
             showInPayables: this.resolveShowInPayables(!!installment.showInPayables),
             markAsPaid:
+              !this.isCreditCardExpenseAccount() &&
               this.expensePaymentConfirmed() &&
               !this.isInstallmentDateFuture(installment.occurredAt)
                 ? true

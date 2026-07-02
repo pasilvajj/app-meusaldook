@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { catchError, of } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -19,13 +19,17 @@ import { TransactionFormDialogService } from '../transactions/transaction-form-d
 import { uiAccountFromApi } from './account-api.mapper';
 import { AccountFormDialogService } from './account-form-dialog.service';
 import { CloseInvoiceDialogService } from './close-invoice-dialog.service';
+import { PostInvoicePaymentDialogService } from './post-invoice-payment-dialog.service';
 import {
   CreditCardInvoiceSummary,
   computeCreditCardInvoiceSummary,
+  findScheduledInvoicePayment,
   formatBrDate,
   formatLocalIsoDate,
   invoiceCycleForDisplay,
+  invoicePaymentQueryRange,
   invoiceViewMonthFromAccount,
+  isInvoicePaymentForCard,
   localDayEndFromIso,
   localDayStartFromIso,
   txDateLabel,
@@ -64,6 +68,7 @@ export class CreditCardInvoiceComponent implements OnInit {
   private readonly txDialog = inject(TransactionFormDialogService);
   private readonly accountDialog = inject(AccountFormDialogService);
   private readonly closeInvoiceDialog = inject(CloseInvoiceDialogService);
+  private readonly postPaymentDialog = inject(PostInvoicePaymentDialogService);
   private readonly accountApi = inject(AccountApiService);
   private readonly snack = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
@@ -78,6 +83,7 @@ export class CreditCardInvoiceComponent implements OnInit {
   readonly viewMonth = signal(new Date().getMonth() + 1);
   readonly loading = signal(true);
   readonly transactions = signal<TransactionResponse[]>([]);
+  readonly paymentTransactions = signal<TransactionResponse[]>([]);
   readonly summary = signal<CreditCardInvoiceSummary | null>(null);
   readonly menuTransaction = signal<TransactionResponse | null>(null);
 
@@ -171,6 +177,30 @@ export class CreditCardInvoiceComponent implements OnInit {
         },
       })
       .subscribe();
+  }
+
+  openPostPayment(): void {
+    const acc = this.accountMeta();
+    const s = this.summary();
+    if (!acc || !s) return;
+
+    const remaining = Math.max(0, Math.abs(s.amountToPay));
+    if (remaining < 0.01) {
+      this.snack.open('Não há valor pendente nesta fatura.', 'OK', { duration: 4000 });
+      return;
+    }
+
+    const scheduled = findScheduledInvoicePayment(
+      this.paymentTransactions(),
+      acc.name,
+      s.cycle,
+      acc.publicKey,
+    );
+    this.postPaymentDialog
+      .open({ account: acc, summary: s, scheduledPayment: scheduled ?? undefined })
+      .subscribe((result) => {
+        if (result?.paid) this.loadCycleData();
+      });
   }
 
   openCloseInvoice(): void {
@@ -287,24 +317,39 @@ export class CreditCardInvoiceComponent implements OnInit {
 
     const from = localDayStartFromIso(cycle.periodStartIso);
     const to = localDayEndFromIso(cycle.periodEndIso);
+    const paymentRange = invoicePaymentQueryRange(cycle);
 
-    this.txApi
-      .list({
-        page: 0,
-        size: 5000,
-        from: from.toISOString(),
-        to: to.toISOString(),
-        accountPublicKey: acc.publicKey,
-        includeProjected: true,
-      })
-      .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 })))
-      .subscribe({
-        next: (page) => {
-          this.transactions.set(page.content);
-          this.summary.set(computeCreditCardInvoiceSummary(acc, page.content, cycle));
-          this.loading.set(false);
-        },
-        error: () => this.loading.set(false),
-      });
+    forkJoin({
+      card: this.txApi
+        .list({
+          page: 0,
+          size: 5000,
+          from: from.toISOString(),
+          to: to.toISOString(),
+          accountPublicKey: acc.publicKey,
+          includeProjected: true,
+        })
+        .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 }))),
+      payments: this.txApi
+        .list({
+          page: 0,
+          size: 5000,
+          from: paymentRange.from.toISOString(),
+          to: paymentRange.to.toISOString(),
+          kind: 'EXPENSE',
+        })
+        .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 }))),
+    }).subscribe({
+      next: ({ card, payments }) => {
+        const cardPayments = payments.content.filter((t) =>
+          isInvoicePaymentForCard(t, acc.name, acc.publicKey),
+        );
+        this.transactions.set(card.content);
+        this.paymentTransactions.set(cardPayments);
+        this.summary.set(computeCreditCardInvoiceSummary(acc, card.content, cycle, cardPayments));
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
   }
 }

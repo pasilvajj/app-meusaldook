@@ -1,0 +1,88 @@
+<div mat-dialog-title class="cinv-dlg-title">
+  <span class="cinv-dlg-title-text">Lançar pagamento {{ data.account.name }}</span>
+  <button mat-icon-button type="button" mat-dialog-close class="cinv-dlg-close" aria-label="Fechar">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="cinv-dlg-content">
+  <div class="cinv-hero">
+    <p class="cinv-amount" [class.cinv-amount--zero]="remainingAmount === 0">
+      @if (displayRemaining() < 0) {
+        -R$ {{ remainingAmount | number: '1.2-2':'pt-BR' }}
+      } @else {
+        R$ {{ remainingAmount | number: '1.2-2':'pt-BR' }}
+      }
+    </p>
+    <p class="cinv-due">Vencimento {{ invoiceDueLabel }}</p>
+  </div>
+
+  @if (hasScheduledPayment) {
+    <div class="cinv-alert" role="note">
+      <mat-icon aria-hidden="true">event</mat-icon>
+      <p>
+        Há um pagamento agendado para esta fatura. Ao confirmar, ele será registrado como pago na conta de débito.
+      </p>
+    </div>
+  } @else {
+    <div class="cinv-alert" role="note">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      <p>O valor será debitado da conta selecionada e marcado como pago.</p>
+    </div>
+  }
+
+  <form [formGroup]="form" id="cinv-pay-form" class="cinv-form" (ngSubmit)="submit()">
+    <div class="cinv-row cinv-row--2">
+      <mat-form-field appearance="outline" class="cinv-field">
+        <mat-label>Valor do pagamento</mat-label>
+        <span matTextPrefix class="cinv-prefix">R$&nbsp;</span>
+        <input
+          matInput
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          [value]="paymentAmountText()"
+          (input)="onPaymentAmountInput($event)"
+          (blur)="onPaymentAmountBlur()"
+        />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="cinv-field">
+        <mat-label>Data do pagamento</mat-label>
+        <input matInput [matDatepicker]="payPick" formControlName="paymentDate" required />
+        <mat-datepicker-toggle matIconSuffix [for]="payPick" />
+        <mat-datepicker #payPick />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="cinv-field cinv-field--full cinv-field--account">
+      <mat-label>Conta de débito</mat-label>
+      <mat-select formControlName="debitAccountKey" panelClass="cinv-account-select-panel">
+        <mat-select-trigger>
+          {{ debitAccountName(form.controls.debitAccountKey.value) }}
+        </mat-select-trigger>
+        @for (a of debitAccounts(); track a.publicKey) {
+          <mat-option [value]="a.publicKey">
+            <span class="cinv-account-option">
+              <span class="cinv-account-option__name">{{ a.name }}</span>
+              <span class="cinv-account-option__type">{{ a.typeLabel }}</span>
+            </span>
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions class="cinv-dlg-actions" align="end">
+  <button mat-button type="button" mat-dialog-close>Cancelar</button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="submit"
+    form="cinv-pay-form"
+    class="cinv-submit"
+    [disabled]="saving() || form.invalid"
+  >
+    {{ saving() ? 'Lançando…' : 'Lançar pagamento' }}
+  </button>
+</mat-dialog-actions>

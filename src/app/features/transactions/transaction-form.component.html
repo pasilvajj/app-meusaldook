@@ -158,17 +158,19 @@
 
     <mat-dialog-actions class="tx-dlg-actions tx-dlg-actions--expense" align="end">
       <div class="tx-dlg-actions-left">
-        <button
-          mat-icon-button
-          type="button"
-          class="tx-foot-icon"
-          [class.tx-foot-icon--on]="expensePaymentConfirmed()"
-          [disabled]="isEditingRecurring()"
-          [matTooltip]="expensePaymentConfirmed() ? 'Pagamento confirmado' : 'Pagamento pendente'"
-          (click)="togglePaymentConfirmed(); $event.preventDefault()"
-        >
-          <mat-icon>check_circle</mat-icon>
-        </button>
+        @if (showPaymentConfirmToggle()) {
+          <button
+            mat-icon-button
+            type="button"
+            class="tx-foot-icon"
+            [class.tx-foot-icon--on]="expensePaymentConfirmed()"
+            [disabled]="isEditingRecurring()"
+            [matTooltip]="expensePaymentConfirmed() ? 'Pagamento confirmado' : 'Pagamento pendente'"
+            (click)="togglePaymentConfirmed(); $event.preventDefault()"
+          >
+            <mat-icon>check_circle</mat-icon>
+          </button>
+        }
         <button mat-icon-button type="button" class="tx-foot-icon" matTooltip="Reconciliado (em breve)" disabled>
           <mat-icon>done_all</mat-icon>
         </button>

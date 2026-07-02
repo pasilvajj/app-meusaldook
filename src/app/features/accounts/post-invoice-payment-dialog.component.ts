@@ -1,6 +1,5 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,11 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { forkJoin, Observable, of } from 'rxjs';
-import { startWith } from 'rxjs/operators';
+import { forkJoin, Observable, switchMap } from 'rxjs';
 import { AccountApiService } from '../../core/services/account-api.service';
 import { CategoryApiService } from '../../core/services/category-api.service';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
@@ -22,14 +18,16 @@ import {
   centsFromAmountInputEvent,
   formatBrlAmountInput,
 } from '../../core/utils/brl-money-input';
+import { formatBrDate, invoicePaymentDescription } from './credit-card-invoice.util';
+import {
+  PostInvoicePaymentDialogData,
+  PostInvoicePaymentDialogResult,
+} from './post-invoice-payment-dialog.models';
 import { TransactionFormDialogService } from '../transactions/transaction-form-dialog.service';
-import { writeDtoFromUi } from './account-api.mapper';
-import { formatBrDate, invoicePaymentDescription, nextInvoiceAfterDue } from './credit-card-invoice.util';
-import { CloseInvoiceDialogData, CloseInvoiceDialogResult } from './close-invoice-dialog.models';
 import { accountTypeLabel } from './account.models';
 
 @Component({
-  selector: 'app-close-invoice-dialog',
+  selector: 'app-post-invoice-payment-dialog',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -39,20 +37,19 @@ import { accountTypeLabel } from './account.models';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatSlideToggleModule,
     MatIconModule,
-    MatTooltipModule,
     MatSnackBarModule,
     MatDatepickerModule,
     MatNativeDateModule,
   ],
-  templateUrl: './close-invoice-dialog.component.html',
+  templateUrl: './post-invoice-payment-dialog.component.html',
   styleUrl: './close-invoice-dialog.component.scss',
 })
-export class CloseInvoiceDialogComponent implements OnInit {
+export class PostInvoicePaymentDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
-  private readonly dialogRef = inject(MatDialogRef<CloseInvoiceDialogComponent, CloseInvoiceDialogResult>);
-  readonly data = inject<CloseInvoiceDialogData>(MAT_DIALOG_DATA);
+  private readonly dialogRef =
+    inject(MatDialogRef<PostInvoicePaymentDialogComponent, PostInvoicePaymentDialogResult>);
+  readonly data = inject<PostInvoicePaymentDialogData>(MAT_DIALOG_DATA);
   private readonly accountApi = inject(AccountApiService);
   private readonly txApi = inject(TransactionApiService);
   private readonly categoriesApi = inject(CategoryApiService);
@@ -63,34 +60,37 @@ export class CloseInvoiceDialogComponent implements OnInit {
   readonly debitAccounts = signal<{ publicKey: string; name: string; typeLabel: string }[]>([]);
   private paymentCategoryId = signal<number | null>(null);
 
-  readonly invoiceAmount = Math.abs(this.data.summary.amountToPay);
+  readonly remainingAmount = Math.max(0, Math.abs(this.data.summary.amountToPay));
   readonly invoiceDueLabel = formatBrDate(this.data.summary.cycle.dueIso);
+  readonly hasScheduledPayment = !!this.data.scheduledPayment;
 
-  private readonly defaultPaymentCents = Math.round(this.invoiceAmount * 100);
+  private readonly defaultPaymentCents = Math.round(
+    (this.data.scheduledPayment
+      ? Math.abs(Number(this.data.scheduledPayment.amount))
+      : this.remainingAmount) * 100,
+  );
   readonly paymentAmountCents = signal(this.defaultPaymentCents);
-  readonly paymentAmountText = signal(formatBrlAmountInput(this.invoiceAmount));
+  readonly paymentAmountText = signal(formatBrlAmountInput(this.defaultPaymentCents / 100));
 
   readonly form = this.fb.nonNullable.group({
-    schedulePayment: [true],
-    paymentDate: [this.parseIsoDate(this.data.summary.cycle.dueIso), Validators.required],
-    debitAccountKey: ['principal', Validators.required],
+    paymentDate: [
+      this.data.scheduledPayment
+        ? this.parseIsoDate(this.data.scheduledPayment.occurredAt)
+        : new Date(),
+      Validators.required,
+    ],
+    debitAccountKey: [
+      this.data.scheduledPayment?.accountPublicKey ?? 'principal',
+      Validators.required,
+    ],
   });
 
-  private readonly formTick = toSignal(this.form.valueChanges.pipe(startWith(this.form.getRawValue())), {
-    initialValue: this.form.getRawValue(),
-  });
-
-  readonly schedulePaymentOn = computed(() => Boolean(this.formTick().schedulePayment));
-
-  readonly displayAmount = computed(() => {
+  readonly displayRemaining = computed(() => {
     const v = this.data.summary.amountToPay;
     return v < 0 ? v : -Math.abs(v);
   });
 
   ngOnInit(): void {
-    this.applySchedulePaymentState(this.form.controls.schedulePayment.value);
-    this.form.controls.schedulePayment.valueChanges.subscribe((on) => this.applySchedulePaymentState(on));
-
     forkJoin({
       accounts: this.accountApi.list(),
       categories: this.categoriesApi.list(),
@@ -143,76 +143,86 @@ export class CloseInvoiceDialogComponent implements OnInit {
   submit(): void {
     if (this.saving()) return;
 
-    const schedule = this.form.controls.schedulePayment.value;
-    if (schedule && this.paymentAmountCents() < 1) {
+    if (this.paymentAmountCents() < 1) {
       this.snack.open('Informe um valor de pagamento válido.', 'OK', { duration: 4000 });
       return;
     }
-    if (schedule && !this.form.controls.paymentDate.value) {
+    if (!this.form.controls.paymentDate.value) {
       this.form.controls.paymentDate.markAsTouched();
       return;
     }
-    if (schedule && !this.paymentCategoryId()) {
-      this.snack.open('Cadastre ao menos uma categoria de despesa para agendar o pagamento.', 'OK', {
+    if (!this.paymentCategoryId()) {
+      this.snack.open('Cadastre ao menos uma categoria de despesa para lançar o pagamento.', 'OK', {
         duration: 5000,
       });
       return;
     }
 
     this.saving.set(true);
-    const acc = this.data.account;
-    const dueDay = acc.creditCardDueDay ?? 10;
-    const nextInvoice = nextInvoiceAfterDue(this.data.summary.cycle.dueIso, dueDay);
-    const updatedAccount = { ...acc, creditCardNextInvoiceDate: nextInvoice };
+    const scheduled = this.data.scheduledPayment;
+    const amount = this.paymentAmountCents() / 100;
+    const paymentDate = this.form.controls.paymentDate.value!;
+    const occurredAt = this.toIsoFromDate(paymentDate);
+    const debitKey = this.form.controls.debitAccountKey.value;
 
-    const accountUpdate$ = this.accountApi.update(acc.serverId, writeDtoFromUi(updatedAccount));
+    let payment$: Observable<unknown>;
 
-    let payment$: Observable<unknown> = of(null);
-    if (schedule && this.paymentAmountCents() >= 1) {
-      const paymentDate = this.form.controls.paymentDate.value!;
-      const y = paymentDate.getFullYear();
-      const m = String(paymentDate.getMonth() + 1).padStart(2, '0');
-      const d = String(paymentDate.getDate()).padStart(2, '0');
-      const occurredAt = new Date(`${y}-${m}-${d}T12:00:00`).toISOString();
+    if (scheduled) {
+      const scheduledCents = Math.round(Math.abs(Number(scheduled.amount)) * 100);
+      const needsPatch =
+        this.paymentAmountCents() !== scheduledCents ||
+        scheduled.accountPublicKey !== debitKey ||
+        scheduled.occurredAt.slice(0, 10) !== occurredAt.slice(0, 10);
 
+      if (needsPatch) {
+        payment$ = this.txApi
+          .update(scheduled.id, {
+            amount,
+            kind: 'EXPENSE',
+            categoryId: scheduled.categoryId,
+            accountPublicKey: debitKey,
+            description: scheduled.description ?? invoicePaymentDescription(this.data.account.name),
+            occurredAt,
+          })
+          .pipe(switchMap(() => this.txApi.markPaid(scheduled.id)));
+      } else {
+        payment$ = this.txApi.markPaid(scheduled.id);
+      }
+    } else {
       payment$ = this.txApi.create({
-        amount: this.paymentAmountCents() / 100,
+        amount,
         kind: 'EXPENSE',
         categoryId: this.paymentCategoryId()!,
-        accountPublicKey: this.form.controls.debitAccountKey.value,
-        description: invoicePaymentDescription(acc.name),
+        accountPublicKey: debitKey,
+        description: invoicePaymentDescription(this.data.account.name),
         occurredAt,
-        showInPayables: true,
+        showInPayables: false,
+        markAsPaid: true,
       });
     }
 
-    forkJoin({ account: accountUpdate$, payment: payment$ }).subscribe({
+    payment$.subscribe({
       next: () => {
         this.txDialog.notifyTransactionCommitted();
-        this.snack.open('Fatura fechada com sucesso.', 'OK', { duration: 4000 });
-        this.dialogRef.close({ closed: true });
+        this.snack.open('Pagamento lançado com sucesso.', 'OK', { duration: 4000 });
+        this.dialogRef.close({ paid: true });
       },
       error: () => {
         this.saving.set(false);
-        this.snack.open('Não foi possível fechar a fatura.', 'Fechar', { duration: 5000 });
+        this.snack.open('Não foi possível lançar o pagamento.', 'Fechar', { duration: 5000 });
       },
     });
-  }
-
-  private applySchedulePaymentState(on: boolean | null | undefined): void {
-    const dateCtrl = this.form.controls.paymentDate;
-    const debitCtrl = this.form.controls.debitAccountKey;
-    if (on) {
-      dateCtrl.enable({ emitEvent: false });
-      debitCtrl.enable({ emitEvent: false });
-    } else {
-      dateCtrl.disable({ emitEvent: false });
-      debitCtrl.disable({ emitEvent: false });
-    }
   }
 
   private parseIsoDate(iso: string): Date {
     const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
     return new Date(y, m - 1, d, 12, 0, 0, 0);
+  }
+
+  private toIsoFromDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return new Date(`${y}-${m}-${d}T12:00:00`).toISOString();
   }
 }

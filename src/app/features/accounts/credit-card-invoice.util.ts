@@ -209,10 +209,68 @@ export function formatLocalIsoDate(date: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+export function invoicePaymentDescription(cardName: string): string {
+  return `Pagamento fatura ${cardName}`;
+}
+
+export function invoicePaymentQueryRange(cycle: InvoiceCycle): { from: Date; to: Date } {
+  const [sy, sm, sd] = cycle.periodStartIso.slice(0, 10).split('-').map(Number);
+  const from = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+  from.setDate(from.getDate() - 31);
+  const [y, m, d] = cycle.dueIso.slice(0, 10).split('-').map(Number);
+  const to = new Date(y, m - 1, d + 30, 23, 59, 59, 999);
+  return { from, to };
+}
+
+export function isInvoicePaymentForCard(
+  tx: TransactionResponse,
+  cardName: string,
+  cardPublicKey?: string,
+): boolean {
+  if (tx.kind !== 'EXPENSE') return false;
+  const desc = (tx.description ?? '').trim().toLowerCase();
+  if (!desc.startsWith('pagamento fatura')) return false;
+  const name = cardName.trim().toLowerCase();
+  if (name && desc.includes(name)) return true;
+  const key = cardPublicKey?.trim().toLowerCase();
+  if (key && desc.includes(key)) return true;
+  return desc === invoicePaymentDescription(cardName).toLowerCase();
+}
+
+export function isInvoicePaymentInCycle(
+  tx: TransactionResponse,
+  cardName: string,
+  cycle: InvoiceCycle,
+  cardPublicKey?: string,
+): boolean {
+  if (!isInvoicePaymentForCard(tx, cardName, cardPublicKey)) return false;
+  const range = invoicePaymentQueryRange(cycle);
+  const at = new Date(tx.occurredAt).getTime();
+  return at >= range.from.getTime() && at <= range.to.getTime();
+}
+
+export function findScheduledInvoicePayment(
+  payments: TransactionResponse[],
+  cardName: string,
+  cycle: InvoiceCycle,
+  cardPublicKey?: string,
+): TransactionResponse | null {
+  return (
+    payments.find(
+      (t) =>
+        isInvoicePaymentInCycle(t, cardName, cycle, cardPublicKey) &&
+        !t.paidAt &&
+        t.id > 0 &&
+        !t.projected,
+    ) ?? null
+  );
+}
+
 export function computeCreditCardInvoiceSummary(
   acc: UiAccount,
   txs: TransactionResponse[],
   cycle: InvoiceCycle,
+  paymentTxs: TransactionResponse[] = [],
 ): CreditCardInvoiceSummary {
   const start = parseIsoStart(cycle.periodStartIso);
   const end = parseIsoEnd(cycle.periodEndIso);
@@ -240,10 +298,18 @@ export function computeCreditCardInvoiceSummary(
     if (t.recurringId) fixedExpenses += amt;
   }
 
-  const used = expenseSum;
+  const grossUsed = expenseSum;
   const limit = creditCardLimit(acc);
-  const available = Math.max(0, limit - used);
-  const invoiceTotal = used > 0 ? -used : 0;
+  const invoiceTotal = grossUsed > 0 ? -grossUsed : 0;
+
+  const paidPayments = paymentTxs.filter(
+    (t) => isInvoicePaymentInCycle(t, acc.name, cycle, acc.publicKey) && !!t.paidAt && t.id > 0,
+  );
+  const totalPaid = paidPayments.reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+  const outstanding = Math.max(0, grossUsed - totalPaid);
+  const used = outstanding;
+  const available = Math.max(0, limit - outstanding);
+  const amountToPay = outstanding > 0 ? -outstanding : 0;
 
   return {
     cycle,
@@ -252,8 +318,8 @@ export function computeCreditCardInvoiceSummary(
     available,
     invoiceTotal,
     previousBalance: 0,
-    totalPaid: 0,
-    amountToPay: invoiceTotal,
+    totalPaid,
+    amountToPay,
     expenses: invoiceTotal,
     reconciled: reconciled > 0 ? -reconciled : 0,
     unreconciled: unreconciled > 0 ? -unreconciled : 0,

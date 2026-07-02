@@ -18,6 +18,10 @@ export class TransactionFormDialogService {
   private readonly committed = new Subject<void>();
   readonly transactionCommitted$ = this.committed.asObservable();
 
+  notifyTransactionCommitted(): void {
+    this.committed.next();
+  }
+
   /** Layout “Nova despesa” (mock, largo); opcionalmente editar por `transactionId`. */
   openExpense(opts?: Partial<TransactionFormDialogData>): Observable<boolean | undefined> {
     return this.open({ useExpenseLayout: true, ...opts });

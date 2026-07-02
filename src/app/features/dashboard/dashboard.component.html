@@ -53,16 +53,27 @@
                   <a class="cc-widget-name" [routerLink]="['/contas', 'fatura', row.account.publicKey]">
                     {{ row.account.name }}
                   </a>
-                  <div class="cc-widget-meta">
+                  <div class="cc-widget-meta cc-widget-meta--invoice">
                     <span class="cc-widget-invoice">{{ row.invoiceLabel }}</span>
+                  </div>
+                  <div class="cc-widget-meta">
+                    <span class="cc-widget-muted">A pagar</span>
                     <strong class="cc-widget-amt cc-widget-amt--neg">
-                      @if (row.summary.invoiceTotal < 0) {
-                        -R$ {{ (-row.summary.invoiceTotal) | number: '1.2-2':'pt-BR' }}
+                      @if (row.summary.amountToPay < 0) {
+                        -R$ {{ (-row.summary.amountToPay) | number: '1.2-2':'pt-BR' }}
                       } @else {
-                        R$ {{ row.summary.invoiceTotal | number: '1.2-2':'pt-BR' }}
+                        R$ {{ row.summary.amountToPay | number: '1.2-2':'pt-BR' }}
                       }
                     </strong>
                   </div>
+                  @if (row.summary.totalPaid > 0) {
+                    <div class="cc-widget-meta">
+                      <span class="cc-widget-muted">Pago</span>
+                      <strong class="cc-widget-amt">
+                        R$ {{ row.summary.totalPaid | number: '1.2-2':'pt-BR' }}
+                      </strong>
+                    </div>
+                  }
                   <div class="cc-widget-meta">
                     <span class="cc-widget-muted">Disponível</span>
                     <strong class="cc-widget-amt cc-widget-amt--pos">

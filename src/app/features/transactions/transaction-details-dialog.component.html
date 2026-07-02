@@ -2,14 +2,30 @@
   <div class="txd-grid">
     <section class="txd-col">
       <h3 class="txd-title">{{ data.title }}</h3>
-      <div class="txd-row">
-        <span class="txd-lbl">Valor previsto</span>
-        <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
-      </div>
-      <div class="txd-row">
-        <span class="txd-lbl">Valor efetivo</span>
-        <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
-      </div>
+      @switch (viewMode()) {
+        @case ('settled') {
+          <div class="txd-row">
+            <span class="txd-lbl">Valor previsto</span>
+            <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+          <div class="txd-row">
+            <span class="txd-lbl">Valor efetivo</span>
+            <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+        }
+        @case ('payable') {
+          <div class="txd-row">
+            <span class="txd-lbl">Valor previsto</span>
+            <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+        }
+        @default {
+          <div class="txd-row">
+            <span class="txd-lbl">Valor</span>
+            <strong [class.txd-neg]="amountSigned() < 0">R$ {{ amountSigned() | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+        }
+      }
       <div class="txd-row">
         <span class="txd-lbl">Categoria</span>
         <span>{{ data.tx.categoryName }}</span>
@@ -21,14 +37,53 @@
     </section>
 
     <section class="txd-col">
-      <div class="txd-row">
-        <span class="txd-lbl">Data prevista</span>
-        <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
-      </div>
-      <div class="txd-row">
-        <span class="txd-lbl">Data efetiva</span>
-        <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
-      </div>
+      @switch (viewMode()) {
+        @case ('credit_card') {
+          <div class="txd-row">
+            <span class="txd-lbl">Data da compra</span>
+            <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+          </div>
+          <div class="txd-row">
+            <span class="txd-lbl">Pagamento</span>
+            @if (data.tx.paidAt) {
+              <span>Pago em {{ data.tx.paidAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+            } @else {
+              <span class="txd-pending">
+                Pendente — consta na fatura do cartão
+                @if (invoiceDueLabel(); as due) {
+                  <span class="txd-pending-sub">(venc. {{ due }})</span>
+                }
+              </span>
+            }
+          </div>
+        }
+        @case ('settled') {
+          <div class="txd-row">
+            <span class="txd-lbl">Data prevista</span>
+            <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+          </div>
+          <div class="txd-row">
+            <span class="txd-lbl">Data efetiva</span>
+            <span>{{ data.tx.paidAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+          </div>
+        }
+        @case ('payable') {
+          <div class="txd-row">
+            <span class="txd-lbl">Data prevista</span>
+            <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+          </div>
+          <div class="txd-row">
+            <span class="txd-lbl">Pagamento</span>
+            <span class="txd-pending">Pendente</span>
+          </div>
+        }
+        @default {
+          <div class="txd-row">
+            <span class="txd-lbl">Data</span>
+            <span>{{ data.tx.occurredAt | date: "dd 'de' MMMM 'de' y":"":"pt-BR" }}</span>
+          </div>
+        }
+      }
       <div class="txd-row">
         <span class="txd-lbl">Conta</span>
         <span class="txd-account"><mat-icon>account_balance_wallet</mat-icon>{{ data.tx.accountName }}</span>

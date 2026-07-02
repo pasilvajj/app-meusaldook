@@ -13,11 +13,11 @@ import {
   runInInjectionContext,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ArcElement, Chart, registerables } from 'chart.js';
 import { EMPTY, Subject, forkJoin, of } from 'rxjs';
-import { catchError, map, startWith, switchMap } from 'rxjs/operators';
+import { catchError, filter, map, startWith, switchMap } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -51,10 +51,12 @@ import type { UiAccount } from '../accounts/account.models';
 import {
   CreditCardInvoiceSummary,
   computeCreditCardInvoiceSummary,
-  invoiceCycleForViewMonth,
   effectiveOpenInvoiceCycle,
+  invoiceCycleForViewMonth,
   invoiceLabel,
+  invoicePaymentQueryRange,
   invoiceViewMonthFromAccount,
+  isInvoicePaymentForCard,
   localDayEndFromIso,
   localDayStartFromIso,
 } from '../accounts/credit-card-invoice.util';
@@ -134,6 +136,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
   private readonly categoryDetailDialog = inject(CategoryExpenseDetailDialogService);
+  private readonly router = inject(Router);
   private readonly loadTrigger$ = new Subject<void>();
   private readonly payablesFab = inject(DashboardPayablesFabService);
   private readonly snack = inject(MatSnackBar);
@@ -222,26 +225,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 }
                 const from = localDayStartFromIso(cycle.periodStartIso);
                 const to = localDayEndFromIso(cycle.periodEndIso);
-                return this.txApi
-                  .list({
+                const paymentRange = invoicePaymentQueryRange(cycle);
+                return forkJoin({
+                  card: this.txApi.list({
                     page: 0,
                     size: 5000,
                     from: from.toISOString(),
                     to: to.toISOString(),
                     accountPublicKey: account.publicKey,
                     includeProjected: true,
-                  })
-                  .pipe(
-                    map((page) => {
-                      const summary = computeCreditCardInvoiceSummary(account, page.content, cycle);
-                      return {
-                        account,
-                        summary,
-                        invoiceLabel: invoiceLabel(cycle),
-                      } satisfies CreditCardDashboardRow;
-                    }),
-                    catchError(() => of(null)),
-                  );
+                  }),
+                  payments: this.txApi.list({
+                    page: 0,
+                    size: 5000,
+                    from: paymentRange.from.toISOString(),
+                    to: paymentRange.to.toISOString(),
+                    kind: 'EXPENSE',
+                  }),
+                }).pipe(
+                  map(({ card, payments }) => {
+                    const cardPayments = payments.content.filter((t) =>
+                      isInvoicePaymentForCard(t, account.name, account.publicKey),
+                    );
+                    const summary = computeCreditCardInvoiceSummary(
+                      account,
+                      card.content,
+                      cycle,
+                      cardPayments,
+                    );
+                    return {
+                      account,
+                      summary,
+                      invoiceLabel: invoiceLabel(cycle),
+                    } satisfies CreditCardDashboardRow;
+                  }),
+                  catchError(() => of(null)),
+                );
               });
               return forkJoin(cardLoads).pipe(
                 map((rows) => ({
@@ -322,6 +341,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
 
     this.txDialog.transactionCommitted$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadDashboard());
+
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        filter((e) => {
+          const url = e.urlAfterRedirects.split('?')[0];
+          return url === '/dashboard';
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => this.loadDashboard());
   }
 
   openNewTransactionModal(): void {
