@@ -87,7 +87,7 @@
     <mat-form-field appearance="outline" class="acc-field acc-field--full">
       <mat-label>Considerar saldo</mat-label>
       <mat-select formControlName="considerBalanceMode" required>
-        @for (opt of considerOptions; track opt.id) {
+        @for (opt of considerOptionsForType(); track opt.id) {
           <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
         }
       </mat-select>

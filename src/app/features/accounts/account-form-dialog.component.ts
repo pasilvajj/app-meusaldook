@@ -68,7 +68,7 @@ export class AccountFormDialogComponent {
       initialBalanceDate: new Date().toISOString().slice(0, 10),
       initialBalanceAmount,
       saldoCreditorDebtor,
-      considerBalanceMode: 'IMMEDIATE',
+      considerBalanceMode: accountType === 'CREDIT_CARD' ? 'PENDING' : 'IMMEDIATE',
       ...(n ? { notes: n } : {}),
     });
     this.saving.set(true);

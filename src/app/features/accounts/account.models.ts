@@ -42,3 +42,11 @@ export const CONSIDER_BALANCE_OPTIONS: { id: NonNullable<UiAccount['considerBala
   { id: 'IMMEDIATE', label: 'disponível imediatamente' },
   { id: 'PENDING', label: 'aguardando conciliação (MVP)' },
 ];
+
+export const CREDIT_CARD_CONSIDER_BALANCE_OPTIONS: {
+  id: NonNullable<UiAccount['considerBalanceMode']>;
+  label: string;
+}[] = [
+  { id: 'PENDING', label: 'Prever débito na conta principal' },
+  { id: 'IMMEDIATE', label: 'Somente no cartão de crédito' },
+];

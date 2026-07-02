@@ -20,6 +20,7 @@ import { writeDtoFromUi } from './account-api.mapper';
 import {
   ACCOUNT_TYPE_OPTIONS,
   CONSIDER_BALANCE_OPTIONS,
+  CREDIT_CARD_CONSIDER_BALANCE_OPTIONS,
   AccountEditDialogData,
   AccountType,
   UiAccount,
@@ -52,7 +53,14 @@ export class AccountEditDialogComponent {
 
   readonly typeOptions = ACCOUNT_TYPE_OPTIONS;
   readonly considerOptions = CONSIDER_BALANCE_OPTIONS;
+  readonly creditCardConsiderOptions = CREDIT_CARD_CONSIDER_BALANCE_OPTIONS;
   readonly saving = signal(false);
+
+  readonly considerOptionsForType = computed(() => {
+    this.formTick();
+    const type = this.form.controls.accountType.value as AccountType;
+    return type === 'CREDIT_CARD' ? this.creditCardConsiderOptions : this.considerOptions;
+  });
 
   private readonly initialAmount = Math.abs(this.data.account.initialBalanceAmount ?? 0);
   readonly balanceAmountCents = signal(Math.round(this.initialAmount * 100));
