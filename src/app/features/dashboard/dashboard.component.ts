@@ -16,8 +16,8 @@ import {
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ArcElement, Chart, registerables } from 'chart.js';
-import { EMPTY, Subject } from 'rxjs';
-import { catchError, startWith, switchMap } from 'rxjs/operators';
+import { EMPTY, Subject, forkJoin, of } from 'rxjs';
+import { catchError, map, startWith, switchMap } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -45,8 +45,15 @@ import {
 } from '../transactions/fixed-expense-utils';
 import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
 import { DashboardPayablesFabService } from '../../core/services/dashboard-payables-fab.service';
+import { AccountApiService } from '../../core/services/account-api.service';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
+import {
+  CreditCardInvoiceSummary,
+  computeCreditCardInvoiceSummary,
+  invoiceCycleForViewMonth,
+  invoiceLabel,
+} from '../accounts/credit-card-invoice.util';
 
 Chart.register(...registerables);
 
@@ -88,6 +95,12 @@ export interface MetasDespesaTotal {
   barClass: MetasDespesaRow['barClass'];
 }
 
+export interface CreditCardDashboardRow {
+  account: UiAccount;
+  summary: CreditCardInvoiceSummary;
+  invoiceLabel: string;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -111,6 +124,7 @@ export interface MetasDespesaTotal {
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
+  private readonly accountApi = inject(AccountApiService);
   private readonly txApi = inject(TransactionApiService);
   private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
@@ -151,6 +165,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.contasAReceber().reduce((s, t) => s + (Number(t.amount) || 0), 0),
   );
 
+  readonly creditCardRows = signal<CreditCardDashboardRow[]>([]);
+
   private charts: Chart[] = [];
   private chartsHostAlive = true;
 
@@ -171,19 +187,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const mesLongo = now.toLocaleDateString('pt-BR', { month: 'long' });
           this.metasMesNome.set(mesLongo.replace(/^\w/, (c) => c.toLowerCase()));
 
-          return this.dashboardApi.load(year, month, 'principal').pipe(
-            catchError(() => {
-              this.payablesFab.setHasFuturePayables(false);
-              this.contasAReceber.set([]);
-              this.loading.set(false);
-              return EMPTY;
+          return forkJoin({
+            dashboard: this.dashboardApi.load(year, month, 'principal').pipe(
+              catchError(() => {
+                this.payablesFab.setHasFuturePayables(false);
+                this.contasAReceber.set([]);
+                this.loading.set(false);
+                return EMPTY;
+              }),
+            ),
+            accounts: this.accountApi.list().pipe(catchError(() => of([]))),
+          }).pipe(
+            switchMap(({ dashboard, accounts }) => {
+              if (!dashboard) return EMPTY;
+              const cards = accounts
+                .map(uiAccountFromApi)
+                .filter((a) => a.active && a.accountType === 'CREDIT_CARD');
+              if (!cards.length) {
+                return of({ dashboard, creditCardRows: [] as CreditCardDashboardRow[] });
+              }
+              const cardLoads = cards.map((account) => {
+                const cycle = invoiceCycleForViewMonth(account, year, month);
+                if (!cycle) {
+                  return of(null);
+                }
+                const from = new Date(cycle.periodStartIso);
+                from.setHours(0, 0, 0, 0);
+                const to = new Date(cycle.periodEndIso);
+                to.setHours(23, 59, 59, 999);
+                return this.txApi
+                  .list({
+                    page: 0,
+                    size: 5000,
+                    from: from.toISOString(),
+                    to: to.toISOString(),
+                    accountPublicKey: account.publicKey,
+                    includeProjected: true,
+                  })
+                  .pipe(
+                    map((page) => {
+                      const summary = computeCreditCardInvoiceSummary(account, page.content, cycle);
+                      return {
+                        account,
+                        summary,
+                        invoiceLabel: invoiceLabel(cycle),
+                      } satisfies CreditCardDashboardRow;
+                    }),
+                    catchError(() => of(null)),
+                  );
+              });
+              return forkJoin(cardLoads).pipe(
+                map((rows) => ({
+                  dashboard,
+                  creditCardRows: rows.filter((r): r is CreditCardDashboardRow => r != null),
+                })),
+              );
             }),
           );
         }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (payload) => {
+        next: (result) => {
+          if (!result) return;
+          const payload = result.dashboard;
           const summary = payload.summary;
           const goals = payload.goals;
           const uiAcc = payload.account ? uiAccountFromApi(payload.account) : null;
@@ -235,6 +302,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
           );
           this.contasAReceber.set(aReceber);
+          this.creditCardRows.set(result.creditCardRows);
 
           this.loading.set(false);
           runInInjectionContext(this.injector, () => {

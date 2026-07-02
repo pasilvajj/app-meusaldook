@@ -18,6 +18,11 @@ import {
 } from '../../core/utils/brl-money-input';
 import { writeDtoFromUi } from './account-api.mapper';
 import {
+  defaultNextInvoiceIso,
+  formatBrDate,
+  invoiceClosingIso,
+} from './credit-card-invoice.util';
+import {
   ACCOUNT_TYPE_OPTIONS,
   CONSIDER_BALANCE_OPTIONS,
   CREDIT_CARD_CONSIDER_BALANCE_OPTIONS,
@@ -56,12 +61,7 @@ export class AccountEditDialogComponent {
   readonly creditCardConsiderOptions = CREDIT_CARD_CONSIDER_BALANCE_OPTIONS;
   readonly saving = signal(false);
 
-  readonly considerOptionsForType = computed(() => {
-    this.formTick();
-    const type = this.form.controls.accountType.value as AccountType;
-    return type === 'CREDIT_CARD' ? this.creditCardConsiderOptions : this.considerOptions;
-  });
-
+  private readonly initialDueDay = this.data.account.creditCardDueDay ?? 10;
   private readonly initialAmount = Math.abs(this.data.account.initialBalanceAmount ?? 0);
   readonly balanceAmountCents = signal(Math.round(this.initialAmount * 100));
   readonly balanceAmountText = signal(formatBrlAmountInput(this.initialAmount));
@@ -74,19 +74,51 @@ export class AccountEditDialogComponent {
     initialBalanceAmount: [this.data.account.initialBalanceAmount ?? 0, [Validators.required, Validators.min(0)]],
     saldoCreditorDebtor: [this.data.account.saldoCreditorDebtor ?? 'CREDITOR', Validators.required],
     considerBalanceMode: [this.data.account.considerBalanceMode ?? 'IMMEDIATE', Validators.required],
+    creditCardDueDay: [this.initialDueDay, [Validators.min(1), Validators.max(31)]],
+    creditCardNextInvoiceDate: [
+      this.data.account.creditCardNextInvoiceDate?.slice(0, 10) ?? defaultNextInvoiceIso(this.initialDueDay),
+    ],
+    creditCardClosingDaysBeforeDue: [this.data.account.creditCardClosingDaysBeforeDue ?? 10, [Validators.min(0), Validators.max(30)]],
   });
 
   private readonly formTick = toSignal(this.form.valueChanges.pipe(startWith(this.form.getRawValue())), {
     initialValue: this.form.getRawValue(),
   });
 
+  readonly isCreditCard = computed(() => this.formTick().accountType === 'CREDIT_CARD');
+
+  readonly considerOptionsForType = computed(() =>
+    this.isCreditCard() ? this.creditCardConsiderOptions : this.considerOptions,
+  );
+
+  readonly considerBalanceLabel = computed(() =>
+    this.isCreditCard() ? 'Prever débito na conta' : 'Considerar saldo',
+  );
+
+  readonly closingHint = computed(() => {
+    if (!this.isCreditCard()) return '';
+    this.formTick();
+    const next = this.form.controls.creditCardNextInvoiceDate.value;
+    const days = Number(this.form.controls.creditCardClosingDaysBeforeDue.value);
+    if (!next) return '';
+    return formatBrDate(invoiceClosingIso(next, Number.isFinite(days) ? days : 10));
+  });
+
   readonly saldoFieldLabel = computed(() => {
+    if (this.isCreditCard()) return 'Limite (R$)';
     this.formTick();
     const raw = this.form.controls.initialBalanceDate.value;
     if (!raw || raw.length < 10) return 'Saldo (R$)';
     const [y, m, d] = raw.split('-');
     return `Saldo em ${d}/${m}/${y} (R$)`;
   });
+
+  constructor() {
+    this.applyTypeRules(this.form.controls.accountType.value as AccountType);
+    this.form.controls.accountType.valueChanges.subscribe((type) => {
+      this.applyTypeRules(type as AccountType);
+    });
+  }
 
   onBalanceAmountInput(ev: Event): void {
     const cents = centsFromAmountInputEvent(ev, this.balanceAmountCents());
@@ -103,6 +135,11 @@ export class AccountEditDialogComponent {
     this.form.controls.initialBalanceAmount.markAsTouched();
   }
 
+  onDueDayInput(): void {
+    if (!this.isCreditCard()) return;
+    this.syncCreditCardDates();
+  }
+
   save(): void {
     this.onBalanceAmountBlur();
     if (this.form.invalid || this.saving()) {
@@ -111,8 +148,12 @@ export class AccountEditDialogComponent {
     }
     const v = this.form.getRawValue();
     const prev = this.data.account;
-    const signed =
-      v.saldoCreditorDebtor === 'CREDITOR' ? Math.abs(v.initialBalanceAmount) : -Math.abs(v.initialBalanceAmount);
+    const isCard = v.accountType === 'CREDIT_CARD';
+    const signed = isCard
+      ? Math.abs(v.initialBalanceAmount)
+      : v.saldoCreditorDebtor === 'CREDITOR'
+        ? Math.abs(v.initialBalanceAmount)
+        : -Math.abs(v.initialBalanceAmount);
     const account: UiAccount = {
       ...prev,
       name: v.name.trim(),
@@ -120,9 +161,12 @@ export class AccountEditDialogComponent {
       accountType: v.accountType as AccountType,
       initialBalanceDate: v.initialBalanceDate,
       initialBalanceAmount: Math.abs(v.initialBalanceAmount),
-      saldoCreditorDebtor: v.saldoCreditorDebtor,
+      saldoCreditorDebtor: isCard ? 'CREDITOR' : v.saldoCreditorDebtor,
       considerBalanceMode: v.considerBalanceMode,
       initialBalance: signed,
+      creditCardDueDay: isCard ? Number(v.creditCardDueDay) : null,
+      creditCardNextInvoiceDate: isCard ? v.creditCardNextInvoiceDate : null,
+      creditCardClosingDaysBeforeDue: isCard ? Number(v.creditCardClosingDaysBeforeDue) : null,
     };
     const dto = writeDtoFromUi(account);
     this.saving.set(true);
@@ -139,8 +183,54 @@ export class AccountEditDialogComponent {
   }
 
   infoLink(): void {
-    window.alert(
-      'O saldo inicial e a data definem o ponto de partida do extrato. Integração bancária virá mais tarde.',
-    );
+    const msg = this.isCreditCard()
+      ? 'O limite e o vencimento definem a fatura do cartão. Integração bancária virá mais tarde.'
+      : 'O saldo inicial e a data definem o ponto de partida do extrato. Integração bancária virá mais tarde.';
+    window.alert(msg);
+  }
+
+  private applyTypeRules(type: AccountType): void {
+    const isCard = type === 'CREDIT_CARD';
+    this.setCreditCardValidators(isCard);
+    if (isCard) {
+      if (!this.form.controls.creditCardNextInvoiceDate.value) {
+        this.syncCreditCardDates();
+      }
+      if (this.form.controls.considerBalanceMode.value === 'IMMEDIATE') {
+        this.form.controls.considerBalanceMode.setValue('PENDING');
+      }
+    }
+  }
+
+  private syncCreditCardDates(): void {
+    const dueDay = Number(this.form.controls.creditCardDueDay.value);
+    if (!Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) return;
+    this.form.controls.creditCardNextInvoiceDate.setValue(defaultNextInvoiceIso(dueDay));
+  }
+
+  private setCreditCardValidators(enabled: boolean): void {
+    const due = this.form.controls.creditCardDueDay;
+    const next = this.form.controls.creditCardNextInvoiceDate;
+    const closing = this.form.controls.creditCardClosingDaysBeforeDue;
+    const balanceDate = this.form.controls.initialBalanceDate;
+    const saldoNature = this.form.controls.saldoCreditorDebtor;
+    if (enabled) {
+      due.setValidators([Validators.required, Validators.min(1), Validators.max(31)]);
+      next.setValidators([Validators.required]);
+      closing.setValidators([Validators.required, Validators.min(0), Validators.max(30)]);
+      balanceDate.clearValidators();
+      saldoNature.clearValidators();
+    } else {
+      due.clearValidators();
+      next.clearValidators();
+      closing.clearValidators();
+      balanceDate.setValidators([Validators.required]);
+      saldoNature.setValidators([Validators.required]);
+    }
+    due.updateValueAndValidity({ emitEvent: false });
+    next.updateValueAndValidity({ emitEvent: false });
+    closing.updateValueAndValidity({ emitEvent: false });
+    balanceDate.updateValueAndValidity({ emitEvent: false });
+    saldoNature.updateValueAndValidity({ emitEvent: false });
   }
 }

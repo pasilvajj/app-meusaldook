@@ -75,6 +75,98 @@
   grid-column: span 12;
 }
 
+.widget--creditcards {
+  grid-column: span 12;
+}
+
+.widget--creditcards mat-card-title {
+  font-size: 0.95rem !important;
+  font-weight: 650 !important;
+  color: var(--dash-muted);
+}
+
+.cc-widget-body {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.15rem !important;
+}
+
+.cc-widget-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.55rem 0.15rem;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.45);
+}
+
+.cc-widget-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0.15rem;
+}
+
+.cc-widget-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.12);
+  color: var(--dash-teal);
+}
+
+.cc-widget-icon mat-icon {
+  font-size: 1.2rem;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.cc-widget-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.cc-widget-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--dash-ink);
+  text-decoration: none;
+}
+
+.cc-widget-name:hover {
+  color: var(--dash-teal);
+  text-decoration: underline;
+}
+
+.cc-widget-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+}
+
+.cc-widget-invoice,
+.cc-widget-muted {
+  color: var(--dash-muted);
+  min-width: 0;
+}
+
+.cc-widget-amt {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cc-widget-amt--neg {
+  color: #be123c;
+}
+
+.cc-widget-amt--pos {
+  color: #047857;
+}
+
 .widget--chart {
   grid-column: span 6;
   min-height: 320px;

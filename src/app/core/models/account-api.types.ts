@@ -13,6 +13,9 @@ export interface AccountApiResponse {
   initialBalanceAmount: number;
   saldoCreditorDebtor: 'CREDITOR' | 'DEBTOR';
   considerBalanceMode: 'IMMEDIATE' | 'PENDING';
+  creditCardDueDay?: number | null;
+  creditCardNextInvoiceDate?: string | null;
+  creditCardClosingDaysBeforeDue?: number | null;
   notes: string | null;
   signedInitialBalance: number;
   createdAt: string;
@@ -29,5 +32,8 @@ export interface AccountWriteRequestDto {
   initialBalanceAmount: number;
   saldoCreditorDebtor: 'CREDITOR' | 'DEBTOR';
   considerBalanceMode: 'IMMEDIATE' | 'PENDING';
+  creditCardDueDay?: number | null;
+  creditCardNextInvoiceDate?: string | null;
+  creditCardClosingDaysBeforeDue?: number | null;
   notes?: string | null;
 }

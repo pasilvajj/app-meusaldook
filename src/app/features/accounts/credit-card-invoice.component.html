@@ -1,0 +1,138 @@
+<div class="cci-screen">
+  @if (loading()) {
+    <div class="cci-loading">
+      <mat-spinner diameter="40" />
+      <span>Carregando fatura…</span>
+    </div>
+  } @else {
+  @if (accountMeta(); as acc) {
+    @if (summary(); as s) {
+      <div class="cci-layout">
+        <aside class="cci-side">
+          <mat-card class="cci-card" appearance="outlined">
+            <mat-card-content class="cci-account-bar">
+              <span class="cci-account-icon" aria-hidden="true">
+                <mat-icon>credit_card</mat-icon>
+              </span>
+              <div class="cci-account-text">
+                <span class="cci-account-label">Cartão</span>
+                <span class="cci-account-name">{{ acc.name }}</span>
+              </div>
+              <button mat-icon-button type="button" (click)="editAccount()" aria-label="Editar cartão">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <a mat-icon-button routerLink="/dashboard" aria-label="Visão geral">
+                <mat-icon>dashboard</mat-icon>
+              </a>
+            </mat-card-content>
+            <mat-divider />
+            <mat-card-content class="cci-date-bar">
+              <button mat-icon-button type="button" (click)="shiftMonth(-1)" aria-label="Mês anterior">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <div class="cci-date-center">
+                <span class="cci-date-title">{{ monthNavLabel() }}</span>
+                <button mat-icon-button type="button" (click)="goTodayMonth()" aria-label="Mês atual">
+                  <mat-icon>calendar_today</mat-icon>
+                </button>
+              </div>
+              <button mat-icon-button type="button" (click)="shiftMonth(1)" aria-label="Próximo mês">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="cci-card cci-card--summary" appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Fatura atual (R$)</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="cci-kv">
+              <div class="cci-kv-row"><span>Fechamento</span><strong>{{ formatDate(s.cycle.closingIso) }}</strong></div>
+              <div class="cci-kv-row"><span>Vencimento</span><strong>{{ formatDate(s.cycle.dueIso) }}</strong></div>
+              <div class="cci-kv-row"><span>Saldo anterior</span><strong>{{ s.previousBalance | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row"><span>Total pago</span><strong>{{ s.totalPaid | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row cci-kv-row--emph"><span>Total</span><strong class="cci-neg">{{ s.invoiceTotal | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row cci-kv-row--emph"><span>Valor a pagar</span><strong class="cci-neg">{{ s.amountToPay | number: '1.2-2':'pt-BR' }}</strong></div>
+            </mat-card-content>
+            <mat-card-content class="cci-actions">
+              <button mat-button type="button" class="cci-action-link" (click)="actionSoon('Fechar fatura')">Fechar fatura</button>
+              <button mat-button type="button" class="cci-action-link" (click)="actionSoon('Lançar pagamento')">Lançar pagamento</button>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="cci-card" appearance="outlined">
+            <mat-card-header><mat-card-title>Detalhamento</mat-card-title></mat-card-header>
+            <mat-card-content class="cci-kv">
+              <div class="cci-kv-row"><span>Despesas</span><strong class="cci-neg">{{ s.expenses | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row"><span>Total conciliado</span><strong class="cci-neg">{{ s.reconciled | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row"><span>Total não conciliado</span><strong>{{ s.unreconciled | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row"><span>Despesas fixas</span><strong>{{ s.fixedExpenses | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row"><span>Parcelas futuras</span><strong>{{ s.futureInstallments | number: '1.2-2':'pt-BR' }}</strong></div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="cci-card" appearance="outlined">
+            <mat-card-header><mat-card-title>Limite (Total)</mat-card-title></mat-card-header>
+            <mat-card-content class="cci-kv">
+              <div class="cci-kv-row"><span>Limite da conta</span><strong class="cci-pos">{{ s.limit | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row"><span>Utilizado</span><strong class="cci-neg">-{{ s.used | number: '1.2-2':'pt-BR' }}</strong></div>
+              <div class="cci-kv-row cci-kv-row--emph"><span>Disponível</span><strong class="cci-pos">{{ s.available | number: '1.2-2':'pt-BR' }}</strong></div>
+            </mat-card-content>
+          </mat-card>
+        </aside>
+
+        <section class="cci-main">
+          <mat-card class="cci-card cci-card--list" appearance="outlined">
+            <mat-card-content class="cci-toolbar">
+              <span class="cci-filter-label">Filtrar</span>
+              <span class="cci-legend"><i class="cci-dot cci-dot--open"></i>Não conciliados</span>
+              <span class="cci-legend"><i class="cci-dot cci-dot--ok"></i>Conciliados</span>
+              <div class="cci-toolbar-spacer"></div>
+              <button mat-icon-button type="button" aria-label="Buscar" (click)="actionSoon('Busca')">
+                <mat-icon>search</mat-icon>
+              </button>
+            </mat-card-content>
+            <mat-divider />
+            <mat-card-content class="cci-list">
+              @for (tx of expenseRows(); track tx.id) {
+                <div class="cci-row">
+                  <span class="cci-cell cci-cell--dot">
+                    <i class="cci-dot" [class.cci-dot--ok]="!tx.projected" [class.cci-dot--open]="tx.projected"></i>
+                  </span>
+                  <span class="cci-cell cci-cell--day" [class.cci-cell--today]="txDateLabel(tx.occurredAt) === 'hoje'">
+                    {{ txDateLabel(tx.occurredAt) }}
+                  </span>
+                  <span class="cci-cell cci-cell--desc">
+                    <span class="cci-tx-title">{{ tx.description?.trim() || tx.categoryName }}</span>
+                    <span class="cci-cat-pill">{{ tx.categoryName }}</span>
+                  </span>
+                  <span class="cci-cell cci-cell--chk">
+                    @if (!tx.projected) {
+                      <mat-icon class="cci-check">done_all</mat-icon>
+                    }
+                  </span>
+                  <span class="cci-cell cci-cell--amt cci-neg">-{{ tx.amount | number: '1.2-2':'pt-BR' }}</span>
+                  <button mat-icon-button type="button" aria-label="Opções" disabled>
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                </div>
+              } @empty {
+                <p class="cci-empty">Nenhuma despesa neste período de fatura.</p>
+              }
+            </mat-card-content>
+            <mat-divider />
+            <mat-card-content class="cci-list-footer">
+              <button mat-stroked-button type="button" (click)="openNewExpense()">Incluir despesa</button>
+            </mat-card-content>
+          </mat-card>
+        </section>
+      </div>
+    } @else {
+      <div class="cci-empty-page">
+        <p>Configure o dia de vencimento deste cartão para visualizar a fatura.</p>
+        <button mat-flat-button type="button" (click)="editAccount()">Editar cartão</button>
+      </div>
+    }
+  }
+  }
+</div>

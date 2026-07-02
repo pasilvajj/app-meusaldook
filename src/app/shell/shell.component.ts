@@ -53,6 +53,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (u.startsWith('/metas')) return 'Metas de orçamento';
     if (u.startsWith('/transactions')) return 'Transações';
     if (u.startsWith('/categories')) return 'Categorias';
+    if (u.includes('/contas/fatura')) return 'Fatura do cartão';
     if (u.includes('/contas/extrato')) return 'Extrato de contas';
     if (u.startsWith('/contas')) return 'Contas';
     if (u.startsWith('/settings')) return 'Configurações da conta e plano';
@@ -71,6 +72,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (path === '/contas' || path === '/contas/') return false;
     if (path.startsWith('/categories')) return false;
     if (path.startsWith('/settings')) return false;
+    if (path.startsWith('/contas/fatura')) return false;
     if (path.startsWith('/relatorios')) return false;
     return true;
   });

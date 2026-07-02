@@ -103,11 +103,19 @@
               <mat-label>Descrição</mat-label>
               <input matInput type="text" formControlName="summary" autocomplete="off" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="tx-field">
+            <mat-form-field appearance="outline" class="tx-field tx-field--account">
               <mat-label>Conta</mat-label>
-              <mat-select formControlName="accountKey">
+              <mat-select formControlName="accountKey" panelClass="tx-account-select-panel">
+                <mat-select-trigger>
+                  {{ expenseAccountName(form.controls.accountKey.value) }}
+                </mat-select-trigger>
                 @for (a of expenseAccountOptions(); track a.publicKey) {
-                  <mat-option [value]="a.publicKey">{{ a.name }}</mat-option>
+                  <mat-option [value]="a.publicKey">
+                    <span class="tx-account-option">
+                      <span class="tx-account-option__name">{{ a.name }}</span>
+                      <span class="tx-account-option__type">{{ a.typeLabel }}</span>
+                    </span>
+                  </mat-option>
                 }
               </mat-select>
             </mat-form-field>

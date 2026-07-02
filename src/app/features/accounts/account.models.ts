@@ -18,6 +18,9 @@ export interface UiAccount {
   initialBalanceDate?: string;
   saldoCreditorDebtor?: 'CREDITOR' | 'DEBTOR';
   considerBalanceMode?: 'IMMEDIATE' | 'PENDING';
+  creditCardDueDay?: number | null;
+  creditCardNextInvoiceDate?: string | null;
+  creditCardClosingDaysBeforeDue?: number | null;
   notes?: string;
 }
 
@@ -37,6 +40,15 @@ export const ACCOUNT_TYPE_OPTIONS: { id: AccountType; label: string }[] = [
   { id: 'CASH', label: 'Dinheiro' },
   { id: 'OTHER_ASSET', label: 'Outros ativos' },
 ];
+
+const ACCOUNT_TYPE_LABEL = Object.fromEntries(
+  ACCOUNT_TYPE_OPTIONS.map((o) => [o.id, o.label]),
+) as Record<AccountType, string>;
+
+export function accountTypeLabel(type?: AccountType | null): string {
+  if (!type) return ACCOUNT_TYPE_LABEL.CHECKING;
+  return ACCOUNT_TYPE_LABEL[type] ?? ACCOUNT_TYPE_LABEL.CHECKING;
+}
 
 export const CONSIDER_BALANCE_OPTIONS: { id: NonNullable<UiAccount['considerBalanceMode']>; label: string }[] = [
   { id: 'IMMEDIATE', label: 'disponível imediatamente' },

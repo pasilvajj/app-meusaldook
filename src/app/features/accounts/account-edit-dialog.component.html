@@ -39,33 +39,15 @@
     <mat-form-field appearance="outline" class="acc-field acc-field--full">
       <mat-label>Nome</mat-label>
       <input matInput formControlName="name" required maxlength="120" autocomplete="off" />
-      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">savings</mat-icon>
+      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">{{ isCreditCard() ? 'credit_card' : 'savings' }}</mat-icon>
       @if (form.controls.name.hasError('required') && form.controls.name.touched) {
         <mat-error>Informe um nome para a conta</mat-error>
       }
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="acc-field acc-field--full">
-      <mat-label>Data do saldo inicial</mat-label>
-      <input matInput type="date" formControlName="initialBalanceDate" required />
-      <button
-        mat-icon-button
-        matSuffix
-        type="button"
-        tabindex="-1"
-        matTooltip="Data de referência do saldo inicial no extrato."
-        aria-label="Ajuda data do saldo inicial"
-      >
-        <mat-icon>help_outline</mat-icon>
-      </button>
-      @if (form.controls.initialBalanceDate.hasError('required') && form.controls.initialBalanceDate.touched) {
-        <mat-error>Informe a data</mat-error>
-      }
-    </mat-form-field>
-
-    <div class="acc-balance-row">
-      <mat-form-field appearance="outline" class="acc-field acc-field--grow">
-        <mat-label>{{ saldoFieldLabel() }}</mat-label>
+    @if (isCreditCard()) {
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Limite (R$)</mat-label>
         <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
         <input
           matInput
@@ -78,20 +60,116 @@
           (blur)="onBalanceAmountBlur()"
         />
       </mat-form-field>
-      <mat-radio-group class="acc-radio-group" formControlName="saldoCreditorDebtor" aria-label="Natureza do saldo">
-        <mat-radio-button value="CREDITOR">Credor</mat-radio-button>
-        <mat-radio-button value="DEBTOR">Devedor</mat-radio-button>
-      </mat-radio-group>
-    </div>
 
-    <mat-form-field appearance="outline" class="acc-field acc-field--full">
-      <mat-label>Considerar saldo</mat-label>
-      <mat-select formControlName="considerBalanceMode" required>
-        @for (opt of considerOptionsForType(); track opt.id) {
-          <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+      <div class="acc-card-invoice">
+        <div class="acc-dialog-row2 acc-card-invoice-row">
+          <mat-form-field appearance="outline" class="acc-field">
+            <mat-label>Dia vencimento</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="creditCardDueDay"
+              min="1"
+              max="31"
+              inputmode="numeric"
+              (input)="onDueDayInput()"
+            />
+            @if (form.controls.creditCardDueDay.hasError('required') && form.controls.creditCardDueDay.touched) {
+              <mat-error>Informe o dia de vencimento</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="acc-field">
+            <mat-label>Próxima fatura</mat-label>
+            <input matInput type="date" formControlName="creditCardNextInvoiceDate" required />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              tabindex="-1"
+              matTooltip="Data de vencimento da próxima fatura do cartão."
+              aria-label="Ajuda próxima fatura"
+            >
+              <mat-icon>help_outline</mat-icon>
+            </button>
+          </mat-form-field>
+        </div>
+
+        <p class="acc-closing-hint">
+          Fechamento da fatura:
+          <input
+            class="acc-closing-input"
+            type="number"
+            formControlName="creditCardClosingDaysBeforeDue"
+            min="0"
+            max="30"
+            inputmode="numeric"
+            aria-label="Dias antes do vencimento para fechamento da fatura"
+          />
+          dias antes do vencimento
+          @if (closingHint()) {
+            <span class="acc-closing-date">({{ closingHint() }})</span>
+          }
+        </p>
+      </div>
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>{{ considerBalanceLabel() }}</mat-label>
+        <mat-select formControlName="considerBalanceMode" required>
+          @for (opt of considerOptionsForType(); track opt.id) {
+            <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    } @else {
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Data do saldo inicial</mat-label>
+        <input matInput type="date" formControlName="initialBalanceDate" required />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          tabindex="-1"
+          matTooltip="Data de referência do saldo inicial no extrato."
+          aria-label="Ajuda data do saldo inicial"
+        >
+          <mat-icon>help_outline</mat-icon>
+        </button>
+        @if (form.controls.initialBalanceDate.hasError('required') && form.controls.initialBalanceDate.touched) {
+          <mat-error>Informe a data</mat-error>
         }
-      </mat-select>
-    </mat-form-field>
+      </mat-form-field>
+
+      <div class="acc-balance-row">
+        <mat-form-field appearance="outline" class="acc-field acc-field--grow">
+          <mat-label>{{ saldoFieldLabel() }}</mat-label>
+          <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
+          <input
+            matInput
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            required
+            [value]="balanceAmountText()"
+            (input)="onBalanceAmountInput($event)"
+            (blur)="onBalanceAmountBlur()"
+          />
+        </mat-form-field>
+        <mat-radio-group class="acc-radio-group" formControlName="saldoCreditorDebtor" aria-label="Natureza do saldo">
+          <mat-radio-button value="CREDITOR">Credor</mat-radio-button>
+          <mat-radio-button value="DEBTOR">Devedor</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>{{ considerBalanceLabel() }}</mat-label>
+        <mat-select formControlName="considerBalanceMode" required>
+          @for (opt of considerOptionsForType(); track opt.id) {
+            <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
 
     <div class="acc-info-row">
       <button type="button" mat-button class="acc-info-link" (click)="infoLink()">+info</button>

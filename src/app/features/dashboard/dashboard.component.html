@@ -38,6 +38,44 @@
         </mat-card-content>
       </mat-card>
 
+      @if (creditCardRows().length > 0) {
+        <mat-card class="widget widget--creditcards" appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Cartões de crédito</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="cc-widget-body">
+            @for (row of creditCardRows(); track row.account.serverId) {
+              <article class="cc-widget-row">
+                <span class="cc-widget-icon" aria-hidden="true">
+                  <mat-icon>credit_card</mat-icon>
+                </span>
+                <div class="cc-widget-main">
+                  <a class="cc-widget-name" [routerLink]="['/contas', 'fatura', row.account.publicKey]">
+                    {{ row.account.name }}
+                  </a>
+                  <div class="cc-widget-meta">
+                    <span class="cc-widget-invoice">{{ row.invoiceLabel }}</span>
+                    <strong class="cc-widget-amt cc-widget-amt--neg">
+                      @if (row.summary.invoiceTotal < 0) {
+                        -R$ {{ (-row.summary.invoiceTotal) | number: '1.2-2':'pt-BR' }}
+                      } @else {
+                        R$ {{ row.summary.invoiceTotal | number: '1.2-2':'pt-BR' }}
+                      }
+                    </strong>
+                  </div>
+                  <div class="cc-widget-meta">
+                    <span class="cc-widget-muted">Disponível</span>
+                    <strong class="cc-widget-amt cc-widget-amt--pos">
+                      R$ {{ row.summary.available | number: '1.2-2':'pt-BR' }}
+                    </strong>
+                  </div>
+                </div>
+              </article>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
       <mat-card class="widget widget--chart widget--flux" appearance="outlined">
         <mat-card-header>
           <mat-card-title>Fluxo de caixa</mat-card-title>

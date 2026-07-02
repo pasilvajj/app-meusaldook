@@ -40,30 +40,108 @@
     <mat-form-field appearance="outline" class="acc-field acc-field--full">
       <mat-label>Nome</mat-label>
       <input matInput formControlName="name" required maxlength="120" autocomplete="off" />
-      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">savings</mat-icon>
+      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">{{ isCreditCard() ? 'credit_card' : 'savings' }}</mat-icon>
       @if (form.controls.name.hasError('required') && form.controls.name.touched) {
         <mat-error>Informe um nome para a conta</mat-error>
       }
     </mat-form-field>
 
-    <div class="acc-extra-toggle">
-      <button type="button" mat-stroked-button class="acc-extra-btn" (click)="toggleAdvanced()">
-        Configurações adicionais
-      </button>
-    </div>
+    @if (isCreditCard()) {
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Limite (R$)</mat-label>
+        <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
+        <input
+          matInput
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          required
+          [value]="limitAmountText()"
+          (input)="onLimitAmountInput($event)"
+          (blur)="onLimitAmountBlur()"
+        />
+      </mat-form-field>
 
-    @if (showAdvanced()) {
-      <div class="acc-advanced">
-        <mat-form-field appearance="outline" class="acc-field acc-field--full">
-          <mat-label>Saldo inicial (opcional)</mat-label>
-          <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
-          <input matInput type="number" formControlName="initialBalance" min="0" step="0.01" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="acc-field acc-field--full">
-          <mat-label>Notas</mat-label>
-          <textarea matInput formControlName="notes" rows="2" maxlength="500"></textarea>
-        </mat-form-field>
+      <div class="acc-card-invoice">
+        <div class="acc-dialog-row2 acc-card-invoice-row">
+          <mat-form-field appearance="outline" class="acc-field">
+            <mat-label>Dia vencimento</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="creditCardDueDay"
+              min="1"
+              max="31"
+              inputmode="numeric"
+              (input)="onDueDayInput()"
+            />
+            @if (form.controls.creditCardDueDay.hasError('required') && form.controls.creditCardDueDay.touched) {
+              <mat-error>Informe o dia de vencimento</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="acc-field">
+            <mat-label>Próxima fatura</mat-label>
+            <input matInput type="date" formControlName="creditCardNextInvoiceDate" required />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              tabindex="-1"
+              matTooltip="Data de vencimento da próxima fatura do cartão."
+              aria-label="Ajuda próxima fatura"
+            >
+              <mat-icon>help_outline</mat-icon>
+            </button>
+          </mat-form-field>
+        </div>
+
+        <p class="acc-closing-hint">
+          Fechamento da fatura:
+          <input
+            class="acc-closing-input"
+            type="number"
+            formControlName="creditCardClosingDaysBeforeDue"
+            min="0"
+            max="30"
+            inputmode="numeric"
+            aria-label="Dias antes do vencimento para fechamento da fatura"
+          />
+          dias antes do vencimento
+          @if (closingHint()) {
+            <span class="acc-closing-date">({{ closingHint() }})</span>
+          }
+        </p>
       </div>
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Prever débito na conta</mat-label>
+        <mat-select formControlName="considerBalanceMode" required>
+          @for (opt of creditCardConsiderOptions; track opt.id) {
+            <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    } @else {
+      <div class="acc-extra-toggle">
+        <button type="button" mat-stroked-button class="acc-extra-btn" (click)="toggleAdvanced()">
+          Configurações adicionais
+        </button>
+      </div>
+
+      @if (showAdvanced()) {
+        <div class="acc-advanced">
+          <mat-form-field appearance="outline" class="acc-field acc-field--full">
+            <mat-label>Saldo inicial (opcional)</mat-label>
+            <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
+            <input matInput type="number" formControlName="initialBalance" min="0" step="0.01" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="acc-field acc-field--full">
+            <mat-label>Notas</mat-label>
+            <textarea matInput formControlName="notes" rows="2" maxlength="500"></textarea>
+          </mat-form-field>
+        </div>
+      }
     }
   </form>
 </mat-dialog-content>

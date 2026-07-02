@@ -20,6 +20,9 @@ export function uiAccountFromApi(r: AccountApiResponse): UiAccount {
     initialBalanceDate: ibd,
     saldoCreditorDebtor: r.saldoCreditorDebtor,
     considerBalanceMode: r.considerBalanceMode,
+    creditCardDueDay: r.creditCardDueDay ?? undefined,
+    creditCardNextInvoiceDate: r.creditCardNextInvoiceDate?.slice(0, 10) ?? undefined,
+    creditCardClosingDaysBeforeDue: r.creditCardClosingDaysBeforeDue ?? undefined,
     notes: r.notes ?? undefined,
   };
 }
@@ -50,6 +53,9 @@ export function writeDtoForCreate(params: {
   initialBalanceAmount: number;
   saldoCreditorDebtor: 'CREDITOR' | 'DEBTOR';
   considerBalanceMode: 'IMMEDIATE' | 'PENDING';
+  creditCardDueDay?: number | null;
+  creditCardNextInvoiceDate?: string | null;
+  creditCardClosingDaysBeforeDue?: number | null;
   initialBalanceDate: string;
   notes?: string | null;
   publicKey?: string | null;
@@ -64,6 +70,9 @@ export function writeDtoForCreate(params: {
     initialBalanceAmount: params.initialBalanceAmount,
     saldoCreditorDebtor: params.saldoCreditorDebtor,
     considerBalanceMode: params.considerBalanceMode,
+    creditCardDueDay: params.creditCardDueDay ?? null,
+    creditCardNextInvoiceDate: params.creditCardNextInvoiceDate ?? null,
+    creditCardClosingDaysBeforeDue: params.creditCardClosingDaysBeforeDue ?? null,
     notes: params.notes ?? null,
   };
 }
@@ -83,6 +92,9 @@ export function writeDtoFromUi(
     initialBalanceAmount: typeof amt === 'number' ? amt : Number(amt),
     saldoCreditorDebtor: a.saldoCreditorDebtor ?? 'CREDITOR',
     considerBalanceMode: a.considerBalanceMode ?? 'IMMEDIATE',
+    creditCardDueDay: a.creditCardDueDay ?? null,
+    creditCardNextInvoiceDate: a.creditCardNextInvoiceDate ?? null,
+    creditCardClosingDaysBeforeDue: a.creditCardClosingDaysBeforeDue ?? null,
     notes: a.notes ?? null,
     ...overrides,
   };

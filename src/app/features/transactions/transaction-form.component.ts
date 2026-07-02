@@ -26,6 +26,7 @@ import { CategoryApiService } from '../../core/services/category-api.service';
 import { MoneyKind } from '../../core/models/money-kind';
 import { CategoryResponse } from '../../core/models/category.models';
 import type { AccountApiResponse } from '../../core/models/account-api.types';
+import { accountTypeLabel } from '../accounts/account.models';
 import { TransactionFormDialogData } from './transaction-form-dialog.data';
 import { RepetitionCustomizeDialogComponent } from './repetition-customize-dialog.component';
 import type {
@@ -80,7 +81,14 @@ export class TransactionFormComponent implements OnInit {
 
   readonly allCategories = signal<CategoryResponse[]>([]);
   /** Contas para o select “Conta” no layout despesa (chave = `publicKey`). */
-  readonly expenseAccountOptions = signal<{ publicKey: string; name: string }[]>([]);
+  readonly expenseAccountOptions = signal<
+    { publicKey: string; name: string; typeLabel: string }[]
+  >([]);
+
+  expenseAccountName(publicKey: string | null | undefined): string {
+    const key = publicKey ?? 'principal';
+    return this.expenseAccountOptions().find((a) => a.publicKey === key)?.name ?? '';
+  }
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly title = signal('Nova transação');
@@ -162,7 +170,13 @@ export class TransactionFormComponent implements OnInit {
   }
 
   private applyAccountOptions(accs: AccountApiResponse[]): void {
-    this.expenseAccountOptions.set(accs.map((a) => ({ publicKey: a.publicKey, name: a.name })));
+    this.expenseAccountOptions.set(
+      accs.map((a) => ({
+        publicKey: a.publicKey,
+        name: a.name,
+        typeLabel: accountTypeLabel(a.accountType),
+      })),
+    );
     const keys = accs.map((a) => a.publicKey);
     const cur = this.form.controls.accountKey.value;
     if (keys.length && !keys.includes(cur)) {

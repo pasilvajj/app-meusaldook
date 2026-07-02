@@ -96,6 +96,46 @@
   padding-top: 0.5rem;
 }
 
+.acc-card-invoice {
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid var(--acc-line);
+}
+
+.acc-card-invoice-row {
+  margin-bottom: 0.35rem;
+}
+
+.acc-closing-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--acc-muted);
+  line-height: 1.45;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.acc-closing-input {
+  width: 2.6rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--acc-line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--acc-ink);
+  text-align: center;
+}
+
+.acc-closing-date {
+  color: var(--acc-ink);
+  font-weight: 500;
+}
+
 .acc-dialog-actions {
   margin: 0 !important;
   padding: 0.85rem 1.25rem 1.1rem !important;
