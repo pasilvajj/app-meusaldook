@@ -21,9 +21,12 @@ import { TransactionDetailsDialogComponent } from './transaction-details-dialog.
 import { installmentDeleteConfirmMessage } from './installment-utils';
 import {
   canMarkExpensePaid,
+  canMarkIncomeReceived,
+  canMarkTransactionSettled,
   fixedExpenseDeleteConfirmMessage,
   isFixedExpense,
   markExpensePaid$,
+  markIncomeReceived$,
   resolveExpenseEditDialogData,
 } from './fixed-expense-utils';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
@@ -152,6 +155,7 @@ export class TransactionListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly displayedColumns = ['occurredAt', 'description', 'status', 'amount', 'actions', 'balance'] as const;
+  readonly canMarkTransactionSettled = canMarkTransactionSettled;
   readonly rows = signal<TransactionResponse[]>([]);
   /** Movimentos desde o mês de referência do saldo inicial até ao fim do mês anterior (para calcular carry-over). */
   readonly txsThroughPriorMonthEnd = signal<TransactionResponse[]>([]);
@@ -462,6 +466,28 @@ export class TransactionListComponent implements OnInit {
       next: () => this.load(),
       error: () => this.notifyActionError('Não foi possível marcar como paga.'),
     });
+  }
+
+  markReceived(row: TransactionResponse): void {
+    if (!canMarkIncomeReceived(row)) return;
+    markIncomeReceived$(this.api, row).subscribe({
+      next: () => this.load(),
+      error: () => this.notifyActionError('Não foi possível marcar como recebida.'),
+    });
+  }
+
+  confirmSettlement(row: TransactionResponse): void {
+    if (canMarkExpensePaid(row)) {
+      this.markPaid(row);
+      return;
+    }
+    if (canMarkIncomeReceived(row)) {
+      this.markReceived(row);
+    }
+  }
+
+  settlementActionLabel(row: TransactionResponse): string {
+    return row.kind === 'INCOME' ? 'Confirmar recebimento' : 'Confirmar pagamento';
   }
 
   edit(row: TransactionResponse): void {

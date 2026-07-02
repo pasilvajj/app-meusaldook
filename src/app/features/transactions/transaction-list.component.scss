@@ -505,6 +505,19 @@
   display: block;
 }
 
+.tx-status-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0 auto;
+  display: block;
+}
+
+.tx-status-btn mat-icon {
+  margin: 0 auto;
+  display: block;
+}
+
 .tx-action-btn {
   width: 34px !important;
   height: 34px !important;

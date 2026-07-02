@@ -50,11 +50,41 @@ export function isExpensePaid(tx: TransactionResponse): boolean {
   return !!tx.paidAt;
 }
 
+export function isIncomeReceived(tx: TransactionResponse): boolean {
+  return !!tx.paidAt;
+}
+
+export function isTransactionSettled(tx: TransactionResponse): boolean {
+  return !!tx.paidAt;
+}
+
 export function canMarkExpensePaid(tx: TransactionResponse): boolean {
-  return tx.kind === 'EXPENSE' && !isExpensePaid(tx);
+  return tx.kind === 'EXPENSE' && !isTransactionSettled(tx);
+}
+
+export function canMarkIncomeReceived(tx: TransactionResponse): boolean {
+  return tx.kind === 'INCOME' && !isTransactionSettled(tx);
+}
+
+export function canMarkTransactionSettled(tx: TransactionResponse): boolean {
+  return canMarkExpensePaid(tx) || canMarkIncomeReceived(tx);
 }
 
 export function markExpensePaid$(
+  api: TransactionApiService,
+  tx: TransactionResponse,
+): Observable<void> {
+  return markTransactionSettled$(api, tx);
+}
+
+export function markIncomeReceived$(
+  api: TransactionApiService,
+  tx: TransactionResponse,
+): Observable<void> {
+  return markTransactionSettled$(api, tx);
+}
+
+export function markTransactionSettled$(
   api: TransactionApiService,
   tx: TransactionResponse,
 ): Observable<void> {

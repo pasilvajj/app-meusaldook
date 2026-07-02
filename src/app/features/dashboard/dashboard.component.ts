@@ -36,9 +36,11 @@ import { TransactionFormDialogService } from '../transactions/transaction-form-d
 import { installmentDeleteConfirmMessage } from '../transactions/installment-utils';
 import {
   canMarkExpensePaid,
+  canMarkIncomeReceived,
   fixedExpenseDeleteConfirmMessage,
   isFixedExpense,
   markExpensePaid$,
+  markIncomeReceived$,
   resolveExpenseEditDialogData,
 } from '../transactions/fixed-expense-utils';
 import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
@@ -264,6 +266,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     markExpensePaid$(this.txApi, row).subscribe({
       next: () => this.loadDashboard(),
       error: () => this.notifyActionError('Não foi possível marcar como paga.'),
+    });
+  }
+
+  markReceivableReceived(row: TransactionResponse): void {
+    if (!canMarkIncomeReceived(row)) return;
+    markIncomeReceived$(this.txApi, row).subscribe({
+      next: () => this.loadDashboard(),
+      error: () => this.notifyActionError('Não foi possível marcar como recebida.'),
     });
   }
 

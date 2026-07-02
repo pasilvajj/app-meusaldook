@@ -349,6 +349,12 @@
           <mat-icon>edit</mat-icon>
           <span>Editar</span>
         </button>
+        @if (!row.paidAt) {
+          <button mat-menu-item type="button" (click)="markReceivableReceived(row)">
+            <mat-icon>check_circle</mat-icon>
+            <span>Marcar como recebida</span>
+          </button>
+        }
         <button mat-menu-item type="button" (click)="removeReceivable(row)">
           <mat-icon color="warn">delete_outline</mat-icon>
           <span>Excluir</span>
