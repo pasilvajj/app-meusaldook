@@ -266,6 +266,7 @@ export class TransactionListComponent implements OnInit {
         from: from.toISOString(),
         to: to.toISOString(),
         includeProjected: true,
+        excludeCreditCards: true,
       }),
       account: this.accountApi.getByPublicKey('principal').pipe(catchError(() => of(null))),
     })
@@ -282,6 +283,7 @@ export class TransactionListComponent implements OnInit {
               size: 5000,
               from: anchor.toISOString(),
               to: prevEnd.toISOString(),
+              excludeCreditCards: true,
             })
             .pipe(
               catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 })),
@@ -339,6 +341,7 @@ export class TransactionListComponent implements OnInit {
         from: from.toISOString(),
         to: to.toISOString(),
         includeProjected: true,
+        excludeCreditCards: true,
       })
       .pipe(catchError(() => of({ content: this.rows(), totalElements: this.rows().length })))
       .subscribe({
