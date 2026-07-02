@@ -23,7 +23,7 @@
     </div>
 
     <nav class="rail-nav">
-      @for (item of navItems; track item.path) {
+      @for (item of railNavItems; track item.path) {
         <a
           class="rail-link"
           [routerLink]="item.path"
@@ -141,7 +141,7 @@
     </main>
 
     <nav class="bottom-nav" aria-label="Navegação rápida">
-      @for (item of navItems; track item.path) {
+      @for (item of bottomNavItems; track item.path) {
         <a
           class="bottom-nav__item"
           [routerLink]="item.path"

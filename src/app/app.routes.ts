@@ -46,6 +46,11 @@ export const routes: Routes = [
             (m) => m.ACCOUNT_SETTINGS_ROUTES,
           ),
       },
+      {
+        path: 'relatorios',
+        loadChildren: () =>
+          import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

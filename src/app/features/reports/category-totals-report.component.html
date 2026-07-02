@@ -1,0 +1,123 @@
+<a class="back-link" routerLink="/relatorios">
+  <mat-icon>arrow_back</mat-icon>
+  Relatórios
+</a>
+
+@if (loading()) {
+  <div class="report-loading">
+    <mat-spinner diameter="40" />
+    <span>Carregando totais por categoria…</span>
+  </div>
+} @else {
+  @if (summary(); as s) {
+  <div class="report-layout">
+    <aside class="report-side">
+      <mat-card class="period-card" appearance="outlined">
+        <button mat-icon-button type="button" (click)="shiftMonth(-1)" aria-label="Mês anterior">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="period-label">{{ periodLabel() }}</span>
+        <button mat-icon-button type="button" (click)="shiftMonth(1)" aria-label="Mês seguinte">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </mat-card>
+
+      <mat-card class="summary-card" appearance="outlined">
+        <div class="summary-row">
+          <span>Receitas</span>
+          <strong class="summary-val summary-val--pos">R$ {{ incomeTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Despesas</span>
+          <strong class="summary-val summary-val--neg">-R$ {{ expenseTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+        </div>
+        <div class="summary-row summary-row--total">
+          <span>Total</span>
+          <strong
+            class="summary-val"
+            [class.summary-val--pos]="netTotal(s) >= 0"
+            [class.summary-val--neg]="netTotal(s) < 0"
+          >
+            R$ {{ netTotal(s) | number: '1.2-2':'pt-BR' }}
+          </strong>
+        </div>
+      </mat-card>
+
+      <a class="cash-link" routerLink="/dashboard">
+        <mat-icon>swap_horiz</mat-icon>
+        Visão de caixa
+      </a>
+    </aside>
+
+    <section class="report-main">
+      <mat-card class="report-panel" appearance="outlined">
+        <div class="report-toolbar">
+          <button mat-stroked-button type="button" class="filter-btn" disabled>Filtrar</button>
+          <div class="report-legend" aria-label="Legenda de status">
+            <span><i class="dot dot--pending"></i>Pendentes</span>
+            <span><i class="dot dot--planned"></i>Agendados</span>
+            <span><i class="dot dot--ok"></i>Confirmados</span>
+            <span><i class="dot dot--recon"></i>Conciliados</span>
+          </div>
+        </div>
+
+        <div class="split-panels">
+          <article class="split-panel">
+            <h2 class="split-title">Despesas</h2>
+            <div class="donut-block">
+              <div class="chart-wrap">
+                <canvas #expenseDonut aria-label="Gráfico de despesas por categoria"></canvas>
+              </div>
+              <ul class="legend">
+                @for (row of expenseRows(s); track row.categoryName) {
+                  <li>
+                    <span class="dot" [style.background]="legendColor($index)"></span>
+                    <span class="legend-name">{{ row.categoryName }}</span>
+                    <span class="legend-pct">{{ categorySharePct(expenseRows(s), row) }}%</span>
+                    <span class="legend-val legend-val--neg">-R$ {{ formatBrl(row.total) }}</span>
+                  </li>
+                } @empty {
+                  <li class="legend-empty">Sem despesas categorizadas neste mês.</li>
+                }
+              </ul>
+            </div>
+            <footer class="split-footer">
+              <span>Total de despesas</span>
+              <strong class="split-footer-val split-footer-val--neg">
+                -R$ {{ formatBrl(expenseTotal(s)) }}
+              </strong>
+            </footer>
+          </article>
+
+          <article class="split-panel">
+            <h2 class="split-title">Receitas</h2>
+            <div class="donut-block">
+              <div class="chart-wrap">
+                <canvas #incomeDonut aria-label="Gráfico de receitas por categoria"></canvas>
+              </div>
+              <ul class="legend">
+                @for (row of incomeRows(s); track row.categoryName) {
+                  <li>
+                    <span class="dot" [style.background]="legendColor($index)"></span>
+                    <span class="legend-name">{{ row.categoryName }}</span>
+                    <span class="legend-pct">{{ categorySharePct(incomeRows(s), row) }}%</span>
+                    <span class="legend-val legend-val--pos">R$ {{ formatBrl(row.total) }}</span>
+                  </li>
+                } @empty {
+                  <li class="legend-empty">Sem receitas categorizadas neste mês.</li>
+                }
+              </ul>
+            </div>
+            <footer class="split-footer">
+              <span>Total de receitas</span>
+              <strong class="split-footer-val split-footer-val--pos">
+                R$ {{ formatBrl(incomeTotal(s)) }}
+              </strong>
+            </footer>
+          </article>
+        </div>
+      </mat-card>
+    </section>
+  </div>
+  }
+}

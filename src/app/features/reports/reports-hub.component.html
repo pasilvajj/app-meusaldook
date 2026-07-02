@@ -1,0 +1,26 @@
+<div class="reports-hub">
+  <a class="report-card" routerLink="/relatorios/totais-por-categoria">
+    <span class="report-card__icon" aria-hidden="true">
+      <mat-icon>pie_chart</mat-icon>
+    </span>
+    <span class="report-card__body">
+      <span class="report-card__title">Totais por Categoria</span>
+      <span class="report-card__desc">
+        Análise gráfica das receitas e despesas agrupadas por categoria
+      </span>
+    </span>
+  </a>
+
+  <button type="button" class="report-card report-card--soon" (click)="comingSoon('Evolução por Categoria')">
+    <span class="report-card__icon" aria-hidden="true">
+      <mat-icon>show_chart</mat-icon>
+    </span>
+    <span class="report-card__body">
+      <span class="report-card__title">Evolução por Categoria</span>
+      <span class="report-card__desc">
+        Tendência das receitas e despesas por categoria ao longo dos meses
+      </span>
+      <span class="report-card__badge">Em breve</span>
+    </span>
+  </button>
+</div>

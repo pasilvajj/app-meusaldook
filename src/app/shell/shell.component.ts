@@ -56,6 +56,8 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (u.includes('/contas/extrato')) return 'Extrato de contas';
     if (u.startsWith('/contas')) return 'Contas';
     if (u.startsWith('/settings')) return 'Configurações da conta e plano';
+    if (u.includes('/relatorios/totais-por-categoria')) return 'Totais por categoria';
+    if (u.startsWith('/relatorios')) return 'Relatórios';
     return 'Finanças';
   });
 
@@ -69,6 +71,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (path === '/contas' || path === '/contas/') return false;
     if (path.startsWith('/categories')) return false;
     if (path.startsWith('/settings')) return false;
+    if (path.startsWith('/relatorios')) return false;
     return true;
   });
 
@@ -77,13 +80,20 @@ export class ShellComponent implements OnInit, OnDestroy {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   });
 
-  readonly navItems = [
+  readonly mainNavItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Visão geral', shortLabel: 'Início', exact: true },
     { path: '/transactions', icon: 'receipt_long', label: 'Transações', shortLabel: 'Lançamentos', exact: false },
     { path: '/categories', icon: 'category', label: 'Categorias', shortLabel: 'Categorias', exact: false },
     { path: '/contas', icon: 'account_balance_wallet', label: 'Contas', shortLabel: 'Contas', exact: false },
     { path: '/metas', icon: 'flag', label: 'Metas de orçamento', shortLabel: 'Metas', exact: false },
   ] as const;
+
+  readonly railNavItems = [
+    ...this.mainNavItems,
+    { path: '/relatorios', icon: 'assessment', label: 'Relatórios', shortLabel: 'Relatórios', exact: false },
+  ] as const;
+
+  readonly bottomNavItems = this.mainNavItems;
 
   readonly fabMenuOpen = signal(false);
   readonly railOpen = signal(false);
