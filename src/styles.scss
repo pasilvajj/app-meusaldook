@@ -264,6 +264,21 @@ body {
   letter-spacing: 0.01em;
 }
 
+.category-expense-detail-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 12px;
+  padding: 0;
+}
+
+.category-expense-detail-dialog-panel .mat-mdc-dialog-surface {
+  background: #fff;
+}
+
+.cinv-account-select-panel .mat-mdc-option,
+.tx-account-select-panel .mat-mdc-option {
+  min-height: 3.25rem;
+  height: auto;
+}
+
 .transaction-details-dialog-panel .mat-mdc-dialog-container {
   --mdc-dialog-container-shape: 12px;
   padding: 0;

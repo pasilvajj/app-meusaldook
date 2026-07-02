@@ -1,0 +1,49 @@
+<div mat-dialog-title class="ced-title">
+  <span class="ced-title-text">{{ title() }}</span>
+  <button mat-icon-button type="button" class="ced-close" aria-label="Fechar" (click)="close()">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="ced-body">
+  <mat-tab-group class="ced-tabs" animationDuration="0ms">
+    <mat-tab label="Lista de lançamentos">
+      @if (loading()) {
+        <div class="ced-loading">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else {
+        <ul class="ced-list">
+          @for (tx of transactions(); track tx.id) {
+            <li class="ced-row">
+              <span class="ced-dot" aria-hidden="true"></span>
+              <span class="ced-day">{{ txnDay(tx.occurredAt) }}</span>
+              <div class="ced-main">
+                <span class="ced-desc">{{ txnTitle(tx) }}</span>
+                @if (accountMeta(tx); as acc) {
+                  <span class="ced-account-type">{{ acc.typeLabel }}</span>
+                }
+              </div>
+              <span class="ced-amt">{{ amountSigned(tx) | number: '1.2-2':'pt-BR' }}</span>
+            </li>
+          } @empty {
+            <li class="ced-empty">Nenhum lançamento nesta categoria no mês.</li>
+          }
+        </ul>
+        @if (transactions().length > 0) {
+          <footer class="ced-total">
+            <span class="ced-total-lbl">Total</span>
+            <strong class="ced-total-val">-{{ totalAmount() | number: '1.2-2':'pt-BR' }}</strong>
+          </footer>
+        }
+      }
+    </mat-tab>
+    <mat-tab label="Subcategorias">
+      <p class="ced-sub-empty">Subcategorias não estão disponíveis nesta versão.</p>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>
+
+<div mat-dialog-actions class="ced-actions" align="end">
+  <button mat-button type="button" class="ced-fechar" (click)="close()">Fechar</button>
+</div>

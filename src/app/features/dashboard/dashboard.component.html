@@ -240,10 +240,17 @@
               <ul class="legend">
                 @for (row of donutCategories(d); track row.categoryName) {
                   <li>
-                    <span class="dot" [style.background]="legendColor($index)"></span>
-                    <span class="legend-name">{{ row.categoryName }}</span>
-                    <span class="legend-pct">{{ categorySharePct(d, row) }}%</span>
-                    <span class="legend-val" [class.negative]="row.total < 0">R$ {{ formatDonutBrl(row.total) }}</span>
+                    <button
+                      type="button"
+                      class="legend-btn"
+                      (click)="openCategoryDetail(d, row)"
+                      [attr.aria-label]="'Ver lançamentos de ' + row.categoryName"
+                    >
+                      <span class="dot" [style.background]="legendColor($index)"></span>
+                      <span class="legend-name">{{ row.categoryName }}</span>
+                      <span class="legend-pct">{{ categorySharePct(d, row) }}%</span>
+                      <span class="legend-val" [class.negative]="row.total < 0">R$ {{ formatDonutBrl(row.total) }}</span>
+                    </button>
                   </li>
                 } @empty {
                   <li class="legend-empty">Sem despesas categorizadas neste mês.</li>

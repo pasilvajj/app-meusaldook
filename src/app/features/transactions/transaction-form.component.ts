@@ -178,8 +178,11 @@ export class TransactionFormComponent implements OnInit {
       })),
     );
     const keys = accs.map((a) => a.publicKey);
+    const preferred = this.dialogData?.initialAccountKey?.trim();
     const cur = this.form.controls.accountKey.value;
-    if (keys.length && !keys.includes(cur)) {
+    if (preferred && keys.includes(preferred)) {
+      this.form.patchValue({ accountKey: preferred });
+    } else if (keys.length && !keys.includes(cur)) {
       this.form.patchValue({ accountKey: keys[0] });
     }
   }
@@ -263,18 +266,27 @@ export class TransactionFormComponent implements OnInit {
       this.form.controls.occurredDate.setValidators([Validators.required]);
       const today = new Date();
       const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      let occurredDate = todayDate;
+      const initialDate = this.dialogData?.initialOccurredDate?.slice(0, 10);
+      if (initialDate) {
+        const [y, m, d] = initialDate.split('-').map(Number);
+        if (y && m && d) {
+          occurredDate = new Date(y, m - 1, d);
+        }
+      }
       this.title.set(initialKind === 'INCOME' ? 'Nova receita' : 'Nova despesa');
       this.dialogTitle.set(initialKind === 'INCOME' ? 'Nova receita' : 'Nova despesa');
       this.form.patchValue({
         kind: initialKind,
-        occurredDate: todayDate,
+        occurredDate,
         occurredAt: '',
         categoryId: initialCategory?.id ?? 0,
+        accountKey: this.dialogData?.initialAccountKey?.trim() || this.form.controls.accountKey.value,
       });
       this.expenseAmountCents.set(0);
       this.expenseAmountText.set(formatBrlAmountInput(0));
       this.expensePaymentConfirmed.set(true);
-      this.updateOccurredDateIsFuture(todayDate);
+      this.updateOccurredDateIsFuture(occurredDate);
       this.form.controls.occurredAt.updateValueAndValidity({ emitEvent: false });
       this.form.controls.occurredDate.updateValueAndValidity({ emitEvent: false });
       this.wireExpenseLayoutReactiveStreams();
@@ -701,6 +713,9 @@ export class TransactionFormComponent implements OnInit {
     }
 
     const description = this.buildDescription(v);
+    const invoiceCtx = this.dialogData?.creditCardInvoiceContext;
+    const accountPublicKey =
+      invoiceCtx?.accountKey?.trim() || v.accountKey?.trim() || 'principal';
 
     let amount = v.amount;
     if (
@@ -720,7 +735,7 @@ export class TransactionFormComponent implements OnInit {
       amount,
       kind: v.kind,
       categoryId: v.categoryId,
-      accountPublicKey: v.accountKey?.trim() || 'principal',
+      accountPublicKey,
       description,
       occurredAt: occurredIso,
       showInPayables,
@@ -753,7 +768,7 @@ export class TransactionFormComponent implements OnInit {
           startDate: this.resolveExpenseStartDate(v, occurredIso),
           kind: v.kind,
           categoryId: v.categoryId,
-          accountPublicKey: v.accountKey?.trim() || 'principal',
+          accountPublicKey,
           baseDescription: description,
           installmentCount: v.installmentCount,
           initialInstallment: v.initialInstallment,
@@ -782,7 +797,7 @@ export class TransactionFormComponent implements OnInit {
           amount: v.amount,
           kind: v.kind,
           categoryId: v.categoryId,
-          accountPublicKey: v.accountKey?.trim() || 'principal',
+          accountPublicKey,
           description,
           startAt: occurredIso,
           periodicity: v.installmentPeriodicity ?? 'MENSAL',

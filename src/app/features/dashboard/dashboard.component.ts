@@ -52,8 +52,13 @@ import {
   CreditCardInvoiceSummary,
   computeCreditCardInvoiceSummary,
   invoiceCycleForViewMonth,
+  effectiveOpenInvoiceCycle,
   invoiceLabel,
+  invoiceViewMonthFromAccount,
+  localDayEndFromIso,
+  localDayStartFromIso,
 } from '../accounts/credit-card-invoice.util';
+import { CategoryExpenseDetailDialogService } from './category-expense-detail-dialog.service';
 
 Chart.register(...registerables);
 
@@ -128,6 +133,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly txApi = inject(TransactionApiService);
   private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
+  private readonly categoryDetailDialog = inject(CategoryExpenseDetailDialogService);
   private readonly loadTrigger$ = new Subject<void>();
   private readonly payablesFab = inject(DashboardPayablesFabService);
   private readonly snack = inject(MatSnackBar);
@@ -207,14 +213,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 return of({ dashboard, creditCardRows: [] as CreditCardDashboardRow[] });
               }
               const cardLoads = cards.map((account) => {
-                const cycle = invoiceCycleForViewMonth(account, year, month);
+                const view = invoiceViewMonthFromAccount(account) ?? { year, month };
+                const cycle =
+                  effectiveOpenInvoiceCycle(account, view.year, view.month) ??
+                  invoiceCycleForViewMonth(account, view.year, view.month);
                 if (!cycle) {
                   return of(null);
                 }
-                const from = new Date(cycle.periodStartIso);
-                from.setHours(0, 0, 0, 0);
-                const to = new Date(cycle.periodEndIso);
-                to.setHours(23, 59, 59, 999);
+                const from = localDayStartFromIso(cycle.periodStartIso);
+                const to = localDayEndFromIso(cycle.periodEndIso);
                 return this.txApi
                   .list({
                     page: 0,
@@ -319,6 +326,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   openNewTransactionModal(): void {
     this.txDialog.openExpense().subscribe();
+  }
+
+  openCategoryDetail(
+    summary: MonthlySummaryResponse,
+    row: { categoryName: string; total: number },
+  ): void {
+    const now = new Date();
+    this.categoryDetailDialog
+      .open({
+        categoryName: row.categoryName,
+        sharePct: this.categorySharePct(summary, row),
+        categoryTotal: row.total,
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+      })
+      .subscribe();
   }
 
   openNewIncomeModal(): void {

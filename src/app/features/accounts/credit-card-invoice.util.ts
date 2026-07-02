@@ -104,8 +104,109 @@ export function invoiceCycleForViewMonth(acc: UiAccount, year: number, month: nu
   };
 }
 
+/** Mês/ano de referência da fatura aberta (vencimento da próxima fatura). */
+export function invoiceViewMonthFromAccount(acc: UiAccount): { year: number; month: number } | null {
+  const iso = acc.creditCardNextInvoiceDate?.slice(0, 10);
+  if (!iso) return null;
+  const [y, m] = iso.split('-').map(Number);
+  if (!y || m < 1 || m > 12) return null;
+  return { year: y, month: m };
+}
+
 export function invoiceLabel(cycle: InvoiceCycle): string {
   return `Fatura ${formatBrDate(cycle.dueIso)} (Fechamento ${formatBrDate(cycle.closingIso)})`;
+}
+
+/** Próxima data de vencimento após fechar a fatura do ciclo informado. */
+export function nextInvoiceAfterDue(dueIso: string, dueDay: number): string {
+  const [y, m] = dueIso.slice(0, 10).split('-').map(Number);
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  return toIsoDate(new Date(ny, nm - 1, clampDueDay(dueDay, ny, nm), 12, 0, 0, 0));
+}
+
+/** Ciclo efetivo da fatura aberta: inclui compras de hoje mesmo antes do fechamento formal. */
+export function effectiveOpenInvoiceCycle(
+  acc: UiAccount,
+  year: number,
+  month: number,
+  reference = new Date(),
+): InvoiceCycle | null {
+  return invoiceCycleForDisplay(acc, year, month, reference);
+}
+
+/** Ciclo para exibição: fatura aberta inclui hoje; faturas anteriores não sobrepõem a aberta. */
+export function invoiceCycleForDisplay(
+  acc: UiAccount,
+  year: number,
+  month: number,
+  reference = new Date(),
+): InvoiceCycle | null {
+  const base = invoiceCycleForViewMonth(acc, year, month);
+  if (!base) return null;
+
+  const open = invoiceViewMonthFromAccount(acc);
+  if (!open) return base;
+
+  const openBase = invoiceCycleForViewMonth(acc, open.year, open.month);
+  if (!openBase) return base;
+
+  const openStartIso = resolveOpenPeriodStartIso(openBase, reference);
+  const isOpenMonth = open.year === year && open.month === month;
+
+  if (isOpenMonth) {
+    if (openStartIso < base.periodStartIso) {
+      return { ...base, periodStartIso: openStartIso };
+    }
+    return base;
+  }
+
+  if (base.periodEndIso >= openStartIso && base.periodStartIso < openStartIso) {
+    const [y, m, d] = openStartIso.split('-').map(Number);
+    const prev = new Date(y, m - 1, d - 1);
+    return { ...base, periodEndIso: formatLocalIsoDate(prev) };
+  }
+
+  return base;
+}
+
+function resolveOpenPeriodStartIso(baseOpenCycle: InvoiceCycle, reference: Date): string {
+  const todayIso = formatLocalIsoDate(reference);
+  return todayIso < baseOpenCycle.periodStartIso ? todayIso : baseOpenCycle.periodStartIso;
+}
+
+/** Data padrão para novo lançamento dentro do período da fatura visualizada. */
+export function defaultExpenseDateForInvoiceCycle(cycle: InvoiceCycle, reference = new Date()): Date {
+  return clampDateToInvoiceCycle(cycle.periodStartIso, cycle.periodEndIso, reference);
+}
+
+/** Garante que a data caia no intervalo do ciclo de fatura (datas locais). */
+export function clampDateToInvoiceCycle(periodStartIso: string, periodEndIso: string, date: Date): Date {
+  const [sy, sm, sd] = periodStartIso.slice(0, 10).split('-').map(Number);
+  const [ey, em, ed] = periodEndIso.slice(0, 10).split('-').map(Number);
+  const start = new Date(sy, sm - 1, sd, 12, 0, 0, 0).getTime();
+  const end = new Date(ey, em - 1, ed, 12, 0, 0, 0).getTime();
+  const cur = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0).getTime();
+  if (cur < start) return new Date(sy, sm - 1, sd);
+  if (cur > end) return new Date(ey, em - 1, ed);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function localDayStartFromIso(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+export function localDayEndFromIso(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
+}
+
+export function formatLocalIsoDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function computeCreditCardInvoiceSummary(

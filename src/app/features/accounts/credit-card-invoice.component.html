@@ -55,7 +55,7 @@
               <div class="cci-kv-row cci-kv-row--emph"><span>Valor a pagar</span><strong class="cci-neg">{{ s.amountToPay | number: '1.2-2':'pt-BR' }}</strong></div>
             </mat-card-content>
             <mat-card-content class="cci-actions">
-              <button mat-button type="button" class="cci-action-link" (click)="actionSoon('Fechar fatura')">Fechar fatura</button>
+              <button mat-button type="button" class="cci-action-link" (click)="openCloseInvoice()">Fechar fatura</button>
               <button mat-button type="button" class="cci-action-link" (click)="actionSoon('Lançar pagamento')">Lançar pagamento</button>
             </mat-card-content>
           </mat-card>
@@ -112,13 +112,33 @@
                     }
                   </span>
                   <span class="cci-cell cci-cell--amt cci-neg">-{{ tx.amount | number: '1.2-2':'pt-BR' }}</span>
-                  <button mat-icon-button type="button" aria-label="Opções" disabled>
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
+                  @if (canMutateTransaction(tx)) {
+                    <button
+                      mat-icon-button
+                      type="button"
+                      [matMenuTriggerFor]="txMenu"
+                      (click)="selectMenuTransaction(tx)"
+                      aria-label="Opções do lançamento"
+                    >
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                  } @else {
+                    <span class="cci-cell cci-cell--menu-spacer" aria-hidden="true"></span>
+                  }
                 </div>
               } @empty {
                 <p class="cci-empty">Nenhuma despesa neste período de fatura.</p>
               }
+              <mat-menu #txMenu="matMenu">
+                <button mat-menu-item type="button" (click)="editMenuTransaction()">
+                  <mat-icon>edit</mat-icon>
+                  <span>Alterar</span>
+                </button>
+                <button mat-menu-item type="button" (click)="removeMenuTransaction()">
+                  <mat-icon color="warn">delete_outline</mat-icon>
+                  <span>Excluir</span>
+                </button>
+              </mat-menu>
             </mat-card-content>
             <mat-divider />
             <mat-card-content class="cci-list-footer">

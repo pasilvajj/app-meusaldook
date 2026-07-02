@@ -7,4 +7,14 @@ export interface TransactionFormDialogData {
   recurringId?: number;
   /** Tipo inicial ao abrir em modo criação. */
   initialKind?: 'EXPENSE' | 'INCOME';
+  /** Conta pré-selecionada (ex.: cartão na tela de fatura). */
+  initialAccountKey?: string;
+  /** Data do lançamento (yyyy-MM-dd) alinhada ao ciclo de fatura. */
+  initialOccurredDate?: string;
+  /** Lançamento originado na fatura do cartão: força conta e data no ciclo aberto. */
+  creditCardInvoiceContext?: {
+    accountKey: string;
+    periodStartIso: string;
+    periodEndIso: string;
+  };
 }

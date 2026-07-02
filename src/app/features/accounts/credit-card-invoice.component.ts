@@ -18,14 +18,26 @@ import { TransactionApiService } from '../../core/services/transaction-api.servi
 import { TransactionFormDialogService } from '../transactions/transaction-form-dialog.service';
 import { uiAccountFromApi } from './account-api.mapper';
 import { AccountFormDialogService } from './account-form-dialog.service';
+import { CloseInvoiceDialogService } from './close-invoice-dialog.service';
 import {
   CreditCardInvoiceSummary,
   computeCreditCardInvoiceSummary,
   formatBrDate,
-  invoiceCycleForViewMonth,
+  formatLocalIsoDate,
+  invoiceCycleForDisplay,
+  invoiceViewMonthFromAccount,
+  localDayEndFromIso,
+  localDayStartFromIso,
   txDateLabel,
 } from './credit-card-invoice.util';
 import type { UiAccount } from './account.models';
+import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
+import {
+  fixedExpenseDeleteConfirmMessage,
+  isFixedExpense,
+  resolveExpenseEditDialogData,
+} from '../transactions/fixed-expense-utils';
+import { installmentDeleteConfirmMessage } from '../transactions/installment-utils';
 
 @Component({
   selector: 'app-credit-card-invoice',
@@ -48,8 +60,10 @@ import type { UiAccount } from './account.models';
 export class CreditCardInvoiceComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly txApi = inject(TransactionApiService);
+  private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
   private readonly accountDialog = inject(AccountFormDialogService);
+  private readonly closeInvoiceDialog = inject(CloseInvoiceDialogService);
   private readonly accountApi = inject(AccountApiService);
   private readonly snack = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
@@ -65,6 +79,7 @@ export class CreditCardInvoiceComponent implements OnInit {
   readonly loading = signal(true);
   readonly transactions = signal<TransactionResponse[]>([]);
   readonly summary = signal<CreditCardInvoiceSummary | null>(null);
+  readonly menuTransaction = signal<TransactionResponse | null>(null);
 
   readonly monthNavLabel = computed(() => {
     const d = new Date(this.viewYear(), this.viewMonth() - 1, 1);
@@ -85,7 +100,11 @@ export class CreditCardInvoiceComponent implements OnInit {
     this.route.paramMap
       .pipe(startWith(this.route.snapshot.paramMap), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadAccountAndCycle());
-    this.txDialog.transactionCommitted$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadCycleData());
+    this.txDialog.transactionCommitted$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      const acc = this.accountMeta();
+      if (acc) this.syncViewToOpenInvoice(acc);
+      this.loadCycleData();
+    });
   }
 
   shiftMonth(delta: number): void {
@@ -104,9 +123,16 @@ export class CreditCardInvoiceComponent implements OnInit {
   }
 
   goTodayMonth(): void {
-    const now = new Date();
-    this.viewYear.set(now.getFullYear());
-    this.viewMonth.set(now.getMonth() + 1);
+    const acc = this.accountMeta();
+    const fromAccount = acc ? invoiceViewMonthFromAccount(acc) : null;
+    if (fromAccount) {
+      this.viewYear.set(fromAccount.year);
+      this.viewMonth.set(fromAccount.month);
+    } else {
+      const now = new Date();
+      this.viewYear.set(now.getFullYear());
+      this.viewMonth.set(now.getMonth() + 1);
+    }
     this.loadCycleData();
   }
 
@@ -119,11 +145,96 @@ export class CreditCardInvoiceComponent implements OnInit {
   }
 
   openNewExpense(): void {
-    this.txDialog.openExpense().subscribe();
+    const acc = this.accountMeta();
+    if (!acc) {
+      this.txDialog.openExpense().subscribe();
+      return;
+    }
+    const openView = invoiceViewMonthFromAccount(acc) ?? {
+      year: this.viewYear(),
+      month: this.viewMonth(),
+    };
+    const cycle = invoiceCycleForDisplay(acc, openView.year, openView.month);
+    if (!cycle) {
+      this.txDialog.openExpense({ initialAccountKey: acc.publicKey }).subscribe();
+      return;
+    }
+    const today = new Date();
+    this.txDialog
+      .openExpense({
+        initialAccountKey: acc.publicKey,
+        initialOccurredDate: formatLocalIsoDate(today),
+        creditCardInvoiceContext: {
+          accountKey: acc.publicKey,
+          periodStartIso: cycle.periodStartIso,
+          periodEndIso: cycle.periodEndIso,
+        },
+      })
+      .subscribe();
+  }
+
+  openCloseInvoice(): void {
+    const acc = this.accountMeta();
+    const s = this.summary();
+    if (!acc || !s) return;
+    this.closeInvoiceDialog.open({ account: acc, summary: s }).subscribe((result) => {
+      if (result?.closed) this.loadAccountAndCycle();
+    });
   }
 
   actionSoon(label: string): void {
     this.snack.open(`${label} — disponível em breve.`, 'OK', { duration: 3200 });
+  }
+
+  canMutateTransaction(tx: TransactionResponse): boolean {
+    return tx.id > 0 && !tx.projected;
+  }
+
+  selectMenuTransaction(tx: TransactionResponse): void {
+    this.menuTransaction.set(tx);
+  }
+
+  editMenuTransaction(): void {
+    const tx = this.menuTransaction();
+    if (tx) this.editTransaction(tx);
+  }
+
+  removeMenuTransaction(): void {
+    const tx = this.menuTransaction();
+    if (tx) this.removeTransaction(tx);
+  }
+
+  editTransaction(tx: TransactionResponse): void {
+    const target = resolveExpenseEditDialogData(tx);
+    if (!target.recurringId && !target.transactionId) {
+      this.snack.open('Não foi possível identificar este lançamento para edição.', 'OK', { duration: 4000 });
+      return;
+    }
+    this.txDialog.openExpense(target).subscribe();
+  }
+
+  removeTransaction(tx: TransactionResponse): void {
+    if (isFixedExpense(tx)) {
+      if (!confirm(fixedExpenseDeleteConfirmMessage(tx))) return;
+      const req$ = tx.recurringId
+        ? this.recurringApi.delete(tx.recurringId)
+        : tx.sourceTransactionId
+          ? this.txApi.delete(tx.sourceTransactionId)
+          : tx.id > 0
+            ? this.txApi.delete(tx.id)
+            : null;
+      if (!req$) return;
+      req$.subscribe({
+        next: () => this.loadCycleData(),
+        error: () => this.snack.open('Não foi possível excluir a despesa fixa.', 'Fechar', { duration: 5000 }),
+      });
+      return;
+    }
+    if (!confirm(installmentDeleteConfirmMessage(tx, 'Excluir este lançamento?'))) return;
+    this.txApi.delete(tx.id).subscribe({
+      next: () => this.loadCycleData(),
+      error: () => this.snack.open('Não foi possível excluir o lançamento.', 'Fechar', { duration: 5000 }),
+    });
   }
 
   formatDate(iso: string): string {
@@ -146,6 +257,7 @@ export class CreditCardInvoiceComponent implements OnInit {
           return;
         }
         this.accountMeta.set(acc);
+        this.syncViewToOpenInvoice(acc);
         this.loadCycleData();
       },
       error: () => {
@@ -155,10 +267,17 @@ export class CreditCardInvoiceComponent implements OnInit {
     });
   }
 
+  private syncViewToOpenInvoice(acc: UiAccount): void {
+    const view = invoiceViewMonthFromAccount(acc);
+    if (!view) return;
+    this.viewYear.set(view.year);
+    this.viewMonth.set(view.month);
+  }
+
   private loadCycleData(): void {
     const acc = this.accountMeta();
     if (!acc) return;
-    const cycle = invoiceCycleForViewMonth(acc, this.viewYear(), this.viewMonth());
+    const cycle = invoiceCycleForDisplay(acc, this.viewYear(), this.viewMonth());
     if (!cycle) {
       this.summary.set(null);
       this.transactions.set([]);
@@ -166,10 +285,8 @@ export class CreditCardInvoiceComponent implements OnInit {
       return;
     }
 
-    const from = new Date(cycle.periodStartIso);
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(cycle.periodEndIso);
-    to.setHours(23, 59, 59, 999);
+    const from = localDayStartFromIso(cycle.periodStartIso);
+    const to = localDayEndFromIso(cycle.periodEndIso);
 
     this.txApi
       .list({
