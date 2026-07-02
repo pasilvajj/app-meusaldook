@@ -12,36 +12,46 @@
   @if (summary(); as s) {
   <div class="report-layout">
     <aside class="report-side">
-      <mat-card class="period-card" appearance="outlined">
+      <section class="rep-period-card">
         <button mat-icon-button type="button" (click)="shiftMonth(-1)" aria-label="Mês anterior">
           <mat-icon>chevron_left</mat-icon>
         </button>
-        <span class="period-label">{{ periodLabel() }}</span>
+        <span class="rep-period-label">{{ periodLabel() }}</span>
         <button mat-icon-button type="button" (click)="shiftMonth(1)" aria-label="Mês seguinte">
           <mat-icon>chevron_right</mat-icon>
         </button>
-      </mat-card>
+      </section>
 
-      <mat-card class="summary-card" appearance="outlined">
-        <div class="summary-row">
-          <span>Receitas</span>
-          <strong class="summary-val summary-val--pos">R$ {{ incomeTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+      <section class="rep-result-card">
+        <h4>Resultado (R$)</h4>
+        <div class="rep-result-group">
+          <span>Entradas</span>
+          <div class="rep-result-subrow">
+            <span>Receitas</span>
+            <strong class="rep-num-pos">R$ {{ incomeTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
         </div>
-        <div class="summary-row">
-          <span>Despesas</span>
-          <strong class="summary-val summary-val--neg">-R$ {{ expenseTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+        <div class="rep-result-group">
+          <span>Saídas</span>
+          <div class="rep-result-subrow">
+            <span>Despesas</span>
+            <strong class="rep-num-neg">-{{ expenseTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
+          <div class="rep-result-subrow rep-result-subrow--total-out">
+            <span>Total saídas</span>
+            <strong class="rep-num-neg">-{{ expenseTotal(s) | number: '1.2-2':'pt-BR' }}</strong>
+          </div>
         </div>
-        <div class="summary-row summary-row--total">
-          <span>Total</span>
+        <div class="rep-result-row rep-result-row--total">
+          <span>Resultado</span>
           <strong
-            class="summary-val"
-            [class.summary-val--pos]="netTotal(s) >= 0"
-            [class.summary-val--neg]="netTotal(s) < 0"
+            [class.rep-num-neg]="netTotal(s) < 0"
+            [class.rep-num-pos]="netTotal(s) >= 0"
           >
             R$ {{ netTotal(s) | number: '1.2-2':'pt-BR' }}
           </strong>
         </div>
-      </mat-card>
+      </section>
 
       <a class="cash-link" routerLink="/dashboard">
         <mat-icon>swap_horiz</mat-icon>
@@ -51,16 +61,6 @@
 
     <section class="report-main">
       <mat-card class="report-panel" appearance="outlined">
-        <div class="report-toolbar">
-          <button mat-stroked-button type="button" class="filter-btn" disabled>Filtrar</button>
-          <div class="report-legend" aria-label="Legenda de status">
-            <span><i class="dot dot--pending"></i>Pendentes</span>
-            <span><i class="dot dot--planned"></i>Agendados</span>
-            <span><i class="dot dot--ok"></i>Confirmados</span>
-            <span><i class="dot dot--recon"></i>Conciliados</span>
-          </div>
-        </div>
-
         <div class="split-panels">
           <article class="split-panel">
             <h2 class="split-title">Despesas</h2>

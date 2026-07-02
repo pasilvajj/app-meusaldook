@@ -23,7 +23,7 @@ import type { MonthlySummaryResponse } from '../../core/models/summary.models';
 
 Chart.register(...registerables);
 
-const CHART_PALETTE = ['#22c55e', '#2563eb', '#eab308', '#a855f7', '#f97316', '#0ea5e9', '#64748b'] as const;
+const CHART_PALETTE = ['#0d9488', '#2563eb', '#d97706', '#a855f7', '#db2777', '#0ea5e9', '#64748b'] as const;
 
 @Component({
   selector: 'app-category-totals-report',
