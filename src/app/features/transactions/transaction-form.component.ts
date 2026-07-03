@@ -80,6 +80,7 @@ export class TransactionFormComponent implements OnInit {
   expenseLayout = false;
 
   readonly allCategories = signal<CategoryResponse[]>([]);
+  private readonly allAccounts = signal<AccountApiResponse[]>([]);
   /** Contas para o select “Conta” no layout despesa (chave = `publicKey`). */
   readonly expenseAccountOptions = signal<
     { publicKey: string; name: string; typeLabel: string; accountType: AccountApiResponse['accountType'] }[]
@@ -176,17 +177,20 @@ export class TransactionFormComponent implements OnInit {
       });
   }
 
-  private applyAccountOptions(accs: AccountApiResponse[]): void {
+  private applyAccountOptions(accs: AccountApiResponse[], ensurePublicKeys: string[] = []): void {
+    this.allAccounts.set(accs);
+    const ensure = new Set(ensurePublicKeys.map((k) => k.trim()).filter(Boolean));
+    const selectable = accs.filter((a) => a.active || ensure.has(a.publicKey));
     this.accountsByKey.set(new Map(accs.map((a) => [a.publicKey, a])));
     this.expenseAccountOptions.set(
-      accs.map((a) => ({
+      selectable.map((a) => ({
         publicKey: a.publicKey,
         name: a.name,
         typeLabel: accountTypeLabel(a.accountType),
         accountType: a.accountType,
       })),
     );
-    const keys = accs.map((a) => a.publicKey);
+    const keys = selectable.map((a) => a.publicKey);
     const preferred = this.dialogData?.initialAccountKey?.trim();
     const cur = this.form.controls.accountKey.value;
     if (preferred && keys.includes(preferred)) {
@@ -229,6 +233,8 @@ export class TransactionFormComponent implements OnInit {
       }
       this.transactions.get(effectiveId).subscribe({
         next: (t) => {
+          const accountKey = t.accountPublicKey ?? 'principal';
+          this.applyAccountOptions(this.allAccounts(), [accountKey]);
           const local = new Date(t.occurredAt);
           const pad = (n: number) => String(n).padStart(2, '0');
           const localStr = `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`;
@@ -239,7 +245,7 @@ export class TransactionFormComponent implements OnInit {
             description: t.description ?? '',
             occurredAt: localStr,
             occurredDate: new Date(local.getFullYear(), local.getMonth(), local.getDate()),
-            accountKey: t.accountPublicKey ?? 'principal',
+            accountKey,
             showInPayables: !!t.showInPayables,
           });
           this.expensePaymentConfirmed.set(!!t.paidAt);
@@ -283,6 +289,12 @@ export class TransactionFormComponent implements OnInit {
           occurredDate = new Date(y, m - 1, d);
         }
       }
+      const selectableKeys = new Set(this.expenseAccountOptions().map((a) => a.publicKey));
+      const initialKey = this.dialogData?.initialAccountKey?.trim();
+      const accountKey =
+        initialKey && selectableKeys.has(initialKey)
+          ? initialKey
+          : this.form.controls.accountKey.value;
       this.title.set(initialKind === 'INCOME' ? 'Nova receita' : 'Nova despesa');
       this.dialogTitle.set(initialKind === 'INCOME' ? 'Nova receita' : 'Nova despesa');
       this.form.patchValue({
@@ -290,7 +302,7 @@ export class TransactionFormComponent implements OnInit {
         occurredDate,
         occurredAt: '',
         categoryId: initialCategory?.id ?? 0,
-        accountKey: this.dialogData?.initialAccountKey?.trim() || this.form.controls.accountKey.value,
+        accountKey,
       });
       this.expenseAmountCents.set(0);
       this.expenseAmountText.set(formatBrlAmountInput(0));
@@ -451,13 +463,15 @@ export class TransactionFormComponent implements OnInit {
   }
 
   private applyRecurringToForm(r: RecurringTransactionResponse): void {
+    const accountKey = r.accountPublicKey ?? 'principal';
+    this.applyAccountOptions(this.allAccounts(), [accountKey]);
     const start = new Date(r.startAt);
     const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
     this.form.patchValue({
       amount: r.amount,
       kind: r.kind,
       categoryId: r.categoryId,
-      accountKey: r.accountPublicKey ?? 'principal',
+      accountKey,
       showInPayables: !!r.showInPayables,
       occurredDate: startDate,
       repetition: 'FIXA',
