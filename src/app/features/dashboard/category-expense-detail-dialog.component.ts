@@ -14,6 +14,7 @@ import { TransactionResponse } from '../../core/models/transaction.models';
 import { CategoryExpenseDetailDialogData } from './category-expense-detail-dialog.models';
 import { accountTypeLabel } from '../accounts/account.models';
 import type { AccountType } from '../accounts/account.models';
+import { localDayEndFromIso, localDayStartFromIso } from '../accounts/credit-card-invoice.util';
 
 @Component({
   selector: 'app-category-expense-detail-dialog',
@@ -70,9 +71,20 @@ export class CategoryExpenseDetailDialogComponent implements OnInit {
             return of({ txs: [] as TransactionResponse[] });
           }
 
-          const cardKeys = new Set(
-            accounts.filter((a) => a.active && a.accountType === 'CREDIT_CARD').map((a) => a.publicKey),
+          const scopes = this.data.openInvoiceScopes ?? [];
+          const cardLoads = scopes.map((scope) =>
+            this.txApi.list({
+              page: 0,
+              size: 5000,
+              from: localDayStartFromIso(scope.periodStartIso).toISOString(),
+              to: localDayEndFromIso(scope.periodEndIso).toISOString(),
+              categoryId: category.id,
+              kind: 'EXPENSE',
+              accountPublicKey: scope.accountPublicKey,
+              includeProjected: true,
+            }),
           );
+
           const loads = [
             this.txApi.list({
               page: 0,
@@ -84,18 +96,7 @@ export class CategoryExpenseDetailDialogComponent implements OnInit {
               accountPublicKey: 'principal',
               includeProjected: true,
             }),
-            ...[...cardKeys].map((publicKey) =>
-              this.txApi.list({
-                page: 0,
-                size: 5000,
-                from: from.toISOString(),
-                to: to.toISOString(),
-                categoryId: category.id,
-                kind: 'EXPENSE',
-                accountPublicKey: publicKey,
-                includeProjected: true,
-              }),
-            ),
+            ...cardLoads,
           ];
 
           if (!loads.length) {
@@ -163,8 +164,7 @@ export class CategoryExpenseDetailDialogComponent implements OnInit {
 }
 
 function isCreditCardBillPayment(tx: TransactionResponse): boolean {
-  const desc = (tx.description ?? '').trim().toLowerCase();
-  return desc.startsWith('pagamento fatura');
+  return (tx.description ?? '').trim().toLowerCase().startsWith('pagamento fatura');
 }
 
 interface AccountRowMeta {

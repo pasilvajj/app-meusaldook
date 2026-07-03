@@ -238,7 +238,6 @@
        <mat-card class="widget widget--donut" appearance="outlined">
         <mat-card-header>
           <mat-card-title>Despesas por categoria</mat-card-title>
-          <mat-card-subtitle>Distribuição no mês</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content class="donut-card-content">
           <div class="donut-layout">
@@ -249,18 +248,18 @@
             </div>
             <div class="donut-legend-cell">
               <ul class="legend">
-                @for (row of donutCategories(d); track row.categoryName) {
+                @for (row of donutCategories(); track row.categoryName) {
                   <li>
                     <button
                       type="button"
                       class="legend-btn"
-                      (click)="openCategoryDetail(d, row)"
+                      (click)="openCategoryDetail(row)"
                       [attr.aria-label]="'Ver lançamentos de ' + row.categoryName"
                     >
                       <span class="dot" [style.background]="legendColor($index)"></span>
                       <span class="legend-name">{{ row.categoryName }}</span>
-                      <span class="legend-pct">{{ categorySharePct(d, row) }}%</span>
-                      <span class="legend-val" [class.negative]="row.total < 0">R$ {{ formatDonutBrl(row.total) }}</span>
+                      <span class="legend-pct">{{ categorySharePct(row) }}%</span>
+                      <span class="legend-val negative">R$ {{ formatDonutBrl(row.total) }}</span>
                     </button>
                   </li>
                 } @empty {
@@ -268,13 +267,13 @@
                 }
               </ul>
             </div>
-            @if (donutCategories(d).length > 0) {
+            @if (donutCategories().length > 0) {
               <aside class="donut-total-aside" aria-label="Total das despesas por categoria">
                 <div class="donut-total-stack">
                   <span class="donut-total-rule" aria-hidden="true"></span>
                   <span class="donut-total-label">Total</span>
-                  <strong class="donut-total-amount" [class.negative]="donutCategoriesTotal(d) < 0">
-                    R$ {{ formatDonutBrl(donutCategoriesTotal(d)) }}
+                  <strong class="donut-total-amount negative">
+                    R$ {{ formatDonutBrl(donutCategoriesTotal()) }}
                   </strong>
                 </div>
               </aside>

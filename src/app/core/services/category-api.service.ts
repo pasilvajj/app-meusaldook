@@ -13,6 +13,10 @@ export class CategoryApiService {
     return this.http.get<CategoryResponse[]>(`${this.baseUrl}/api/v1/categories`);
   }
 
+  cardPayment(): Observable<CategoryResponse> {
+    return this.http.get<CategoryResponse>(`${this.baseUrl}/api/v1/categories/card-payment`);
+  }
+
   create(body: CategoryRequest): Observable<CategoryResponse> {
     return this.http.post<CategoryResponse>(`${this.baseUrl}/api/v1/categories`, body);
   }

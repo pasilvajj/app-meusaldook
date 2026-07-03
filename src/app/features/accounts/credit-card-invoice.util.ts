@@ -334,6 +334,40 @@ export function txDateLabel(occurredAt: string): string {
   return day === today ? 'hoje' : formatDdMmIso(day);
 }
 
+export function isInvoicePaymentTransaction(tx: TransactionResponse): boolean {
+  return (tx.description ?? '').trim().toLowerCase().startsWith('pagamento fatura');
+}
+
+/** Caixa (byCategory) + compras no cartão das faturas abertas, agrupadas por categoria. */
+export function mergeExpenseCategoriesForDonut(
+  cashByCategory: { categoryName: string; total: number }[],
+  openInvoiceTransactions: TransactionResponse[],
+): { categoryName: string; total: number }[] {
+  const map = new Map<string, number>();
+  for (const c of cashByCategory) {
+    const signed = expenseAmountAsNegative(c.total);
+    if (signed === 0) continue;
+    map.set(c.categoryName, (map.get(c.categoryName) ?? 0) + signed);
+  }
+  for (const tx of openInvoiceTransactions) {
+    if (tx.kind !== 'EXPENSE') continue;
+    if (isInvoicePaymentTransaction(tx)) continue;
+    const name = tx.categoryName?.trim() || 'Sem categoria';
+    const signed = expenseAmountAsNegative(tx.amount);
+    if (signed === 0) continue;
+    map.set(name, (map.get(name) ?? 0) + signed);
+  }
+  return [...map.entries()]
+    .map(([categoryName, total]) => ({ categoryName, total }))
+    .filter((r) => Math.abs(r.total) > 1e-9)
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+}
+
+function expenseAmountAsNegative(amount: number): number {
+  const abs = Math.abs(Number(amount) || 0);
+  return abs === 0 ? 0 : -abs;
+}
+
 function parseIsoStart(iso: string): number {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();

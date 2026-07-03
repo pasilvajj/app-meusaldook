@@ -46,10 +46,12 @@ import {
 import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
 import { DashboardPayablesFabService } from '../../core/services/dashboard-payables-fab.service';
 import { AccountApiService } from '../../core/services/account-api.service';
+import { CategoryApiService } from '../../core/services/category-api.service';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
 import {
   CreditCardInvoiceSummary,
+  InvoiceCycle,
   computeCreditCardInvoiceSummary,
   effectiveOpenInvoiceCycle,
   invoiceCycleForViewMonth,
@@ -59,8 +61,10 @@ import {
   isInvoicePaymentForCard,
   localDayEndFromIso,
   localDayStartFromIso,
+  mergeExpenseCategoriesForDonut,
 } from '../accounts/credit-card-invoice.util';
 import { CategoryExpenseDetailDialogService } from './category-expense-detail-dialog.service';
+import type { OpenInvoiceScope } from './category-expense-detail-dialog.models';
 
 Chart.register(...registerables);
 
@@ -106,6 +110,8 @@ export interface CreditCardDashboardRow {
   account: UiAccount;
   summary: CreditCardInvoiceSummary;
   invoiceLabel: string;
+  cycle: InvoiceCycle;
+  transactions: TransactionResponse[];
 }
 
 @Component({
@@ -132,6 +138,7 @@ export interface CreditCardDashboardRow {
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly accountApi = inject(AccountApiService);
+  private readonly categoryApi = inject(CategoryApiService);
   private readonly txApi = inject(TransactionApiService);
   private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
@@ -175,6 +182,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   );
 
   readonly creditCardRows = signal<CreditCardDashboardRow[]>([]);
+  /** Despesas por categoria: caixa do mês + compras nas faturas abertas do cartão. */
+  readonly expenseCategoriesForDonut = signal<{ categoryName: string; total: number }[]>([]);
+  readonly openInvoiceScopes = signal<OpenInvoiceScope[]>([]);
 
   private charts: Chart[] = [];
   private chartsHostAlive = true;
@@ -206,6 +216,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               }),
             ),
             accounts: this.accountApi.list().pipe(catchError(() => of([]))),
+            _: this.categoryApi.cardPayment().pipe(catchError(() => of(null))),
           }).pipe(
             switchMap(({ dashboard, accounts }) => {
               if (!dashboard) return EMPTY;
@@ -257,6 +268,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
                       account,
                       summary,
                       invoiceLabel: invoiceLabel(cycle),
+                      cycle,
+                      transactions: card.content,
                     } satisfies CreditCardDashboardRow;
                   }),
                   catchError(() => of(null)),
@@ -329,12 +342,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
           );
           this.contasAReceber.set(aReceber);
           this.creditCardRows.set(result.creditCardRows);
+          this.openInvoiceScopes.set(
+            result.creditCardRows.map((r) => ({
+              accountPublicKey: r.account.publicKey,
+              periodStartIso: r.cycle.periodStartIso,
+              periodEndIso: r.cycle.periodEndIso,
+            })),
+          );
+          const donutCategories = mergeExpenseCategoriesForDonut(
+            summary.byCategory,
+            result.creditCardRows.flatMap((r) => r.transactions),
+          );
+          this.expenseCategoriesForDonut.set(donutCategories);
 
           this.loading.set(false);
           runInInjectionContext(this.injector, () => {
             afterNextRender(() => {
               if (!this.chartsHostAlive) return;
-              this.paintCharts(summary, labels, values, goalResidue);
+              this.paintCharts(summary, labels, values, goalResidue, donutCategories);
             });
           });
         },
@@ -358,18 +383,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.txDialog.openExpense().subscribe();
   }
 
-  openCategoryDetail(
-    summary: MonthlySummaryResponse,
-    row: { categoryName: string; total: number },
-  ): void {
+  openCategoryDetail(row: { categoryName: string; total: number }): void {
     const now = new Date();
     this.categoryDetailDialog
       .open({
         categoryName: row.categoryName,
-        sharePct: this.categorySharePct(summary, row),
+        sharePct: this.categorySharePct(row),
         categoryTotal: row.total,
         year: now.getFullYear(),
         month: now.getMonth() + 1,
+        openInvoiceScopes: this.openInvoiceScopes(),
       })
       .subscribe();
   }
@@ -474,6 +497,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     cashLabels: string[],
     cashValues: number[],
     goalResidue: number,
+    donutCategoryRows: { categoryName: string; total: number }[],
   ): void {
     if (!this.chartsHostAlive) return;
     this.destroyCharts();
@@ -546,7 +570,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     if (donut) {
-      const cats = summary.byCategory.filter((c) => c.total !== 0);
+      const cats = donutCategoryRows.filter((c) => Math.abs(c.total) > 1e-9);
       const donutLabels = cats.map((c) => c.categoryName);
       const donutData = cats.map((c) => Math.abs(c.total));
       const palette = this.chartPalette;
@@ -657,20 +681,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   readonly chartPalette = ['#0d9488', '#2563eb', '#d97706', '#a855f7', '#db2777', '#0ea5e9', '#64748b'] as const;
 
-  donutCategories(d: MonthlySummaryResponse): { categoryName: string; total: number }[] {
-    return d.byCategory.filter((c) => c.total !== 0);
+  donutCategories(): { categoryName: string; total: number }[] {
+    return this.expenseCategoriesForDonut().filter((c) => Math.abs(c.total) > 1e-9);
   }
 
-  categorySharePct(d: MonthlySummaryResponse, row: { total: number }): string {
-    const cats = this.donutCategories(d);
+  categorySharePct(row: { total: number }): string {
+    const cats = this.donutCategories();
     const sum = cats.reduce((s, c) => s + Math.abs(c.total), 0);
     if (!sum) return '0';
     const pct = (Math.abs(row.total) / sum) * 100;
     return pct.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  donutCategoriesTotal(d: MonthlySummaryResponse): number {
-    return this.donutCategories(d).reduce((s, c) => s + c.total, 0);
+  donutCategoriesTotal(): number {
+    const sum = this.donutCategories().reduce((s, c) => s + Math.abs(c.total), 0);
+    return sum === 0 ? 0 : -sum;
   }
 
   legendColor(i: number): string {

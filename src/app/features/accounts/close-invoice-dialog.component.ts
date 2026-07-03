@@ -93,9 +93,9 @@ export class CloseInvoiceDialogComponent implements OnInit {
 
     forkJoin({
       accounts: this.accountApi.list(),
-      categories: this.categoriesApi.list(),
+      paymentCategory: this.categoriesApi.cardPayment(),
     }).subscribe({
-      next: ({ accounts, categories }) => {
+      next: ({ accounts, paymentCategory }) => {
         const checking = accounts
           .filter((a) => a.active && (a.accountType === 'CHECKING' || a.publicKey === 'principal'))
           .map((a) => ({
@@ -115,12 +115,7 @@ export class CloseInvoiceDialogComponent implements OnInit {
           this.form.patchValue({ debitAccountKey: keys[0] ?? 'principal' });
         }
 
-        const expenseCats = categories.filter((c) => c.kind === 'EXPENSE');
-        const preferred =
-          expenseCats.find((c) => /outras despesas/i.test(c.name)) ??
-          expenseCats.find((c) => /fatura|pagamento/i.test(c.name) && !/cart[aã]o/i.test(c.name)) ??
-          expenseCats[0];
-        this.paymentCategoryId.set(preferred?.id ?? null);
+        this.paymentCategoryId.set(paymentCategory.id);
       },
     });
   }
