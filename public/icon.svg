@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Financas">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b7f74"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M144 196h224c33 0 60 27 60 60v92c0 33-27 60-60 60H144c-33 0-60-27-60-60V256c0-33 27-60 60-60z"/>
+    <path d="M176 196v-28c0-44 36-80 80-80s80 36 80 80v28"/>
+    <circle cx="256" cy="302" r="28" fill="#ffffff" stroke="none"/>
+  </g>
+  <path d="M318 154l44-44" stroke="#ecfdf5" stroke-width="22" stroke-linecap="round"/>
+  <path d="M318 110h44v44" stroke="#ecfdf5" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
