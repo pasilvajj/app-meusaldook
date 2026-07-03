@@ -16,6 +16,7 @@ import { AccountApiService } from '../../core/services/account-api.service';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
 import { TransactionFormDialogService } from '../transactions/transaction-form-dialog.service';
 import { TransactionDetailsDialogComponent } from '../transactions/transaction-details-dialog.component';
+import { formatTransactionDescriptionLabel } from '../transactions/installment-utils';
 import { uiAccountFromApi } from './account-api.mapper';
 import { AccountFormDialogService } from './account-form-dialog.service';
 import type { UiAccount } from './account.models';
@@ -206,7 +207,7 @@ export class AccountStatementComponent implements OnInit {
         delta,
         run: 0,
         dateLabel: d === today ? 'hoje' : formatDdMmIso(d),
-        desc: (tx.description && tx.description.trim()) || tx.categoryName,
+        desc: formatTransactionDescriptionLabel(tx.description) || tx.categoryName,
       });
     }
 
@@ -409,15 +410,7 @@ export class AccountStatementComponent implements OnInit {
 
   primaryDescription(tx: TransactionResponse): string | null {
     if (tx.kind !== 'EXPENSE') return tx.description?.trim() || null;
-    const raw = (tx.description ?? '').trim();
-    if (!raw) return null;
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => !!l && !l.startsWith('Tags:') && !l.startsWith('['));
-    const first = lines[0] ?? '';
-    if (!first) return null;
-    return first.length > 42 ? `${first.slice(0, 42)}...` : first;
+    return formatTransactionDescriptionLabel(tx.description, { maxLength: 42 });
   }
 }
 

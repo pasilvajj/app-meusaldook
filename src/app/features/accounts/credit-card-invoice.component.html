@@ -87,6 +87,7 @@
               <span class="cci-filter-label">Filtrar</span>
               <span class="cci-legend"><i class="cci-dot cci-dot--open"></i>Não conciliados</span>
               <span class="cci-legend"><i class="cci-dot cci-dot--ok"></i>Conciliados</span>
+              <span class="cci-legend"><i class="cci-dot cci-dot--pay"></i>Pagamentos</span>
               <div class="cci-toolbar-spacer"></div>
               <button mat-icon-button type="button" aria-label="Buscar" (click)="actionSoon('Busca')">
                 <mat-icon>search</mat-icon>
@@ -94,30 +95,50 @@
             </mat-card-content>
             <mat-divider />
             <mat-card-content class="cci-list">
-              @for (tx of expenseRows(); track tx.id) {
-                <div class="cci-row">
+              @for (row of invoiceListRows(); track row.kind + '-' + row.tx.id) {
+                <div class="cci-row" [class.cci-row--payment]="row.kind === 'payment'">
                   <span class="cci-cell cci-cell--dot">
-                    <i class="cci-dot" [class.cci-dot--ok]="!tx.projected" [class.cci-dot--open]="tx.projected"></i>
+                    @if (row.kind === 'payment') {
+                      <i class="cci-dot cci-dot--pay"></i>
+                    } @else {
+                      <i
+                        class="cci-dot"
+                        [class.cci-dot--ok]="!row.tx.projected"
+                        [class.cci-dot--open]="row.tx.projected"
+                      ></i>
+                    }
                   </span>
-                  <span class="cci-cell cci-cell--day" [class.cci-cell--today]="txDateLabel(tx.occurredAt) === 'hoje'">
-                    {{ txDateLabel(tx.occurredAt) }}
+                  <span
+                    class="cci-cell cci-cell--day"
+                    [class.cci-cell--today]="txDateLabel(row.tx.occurredAt) === 'hoje'"
+                  >
+                    {{ txDateLabel(row.tx.occurredAt) }}
                   </span>
                   <span class="cci-cell cci-cell--desc">
-                    <span class="cci-tx-title">{{ tx.description?.trim() || tx.categoryName }}</span>
-                    <span class="cci-cat-pill">{{ tx.categoryName }}</span>
+                    <span class="cci-tx-title">{{ txDescriptionLabel(row.tx) }}</span>
+                    <span class="cci-row-chips">
+                      <span class="cci-chip">{{ row.tx.accountName }}</span>
+                      <span class="cci-chip">{{ row.tx.categoryName }}</span>
+                    </span>
                   </span>
                   <span class="cci-cell cci-cell--chk">
-                    @if (!tx.projected) {
+                    @if (row.kind === 'expense' && !row.tx.projected) {
                       <mat-icon class="cci-check">done_all</mat-icon>
                     }
                   </span>
-                  <span class="cci-cell cci-cell--amt cci-neg">-{{ tx.amount | number: '1.2-2':'pt-BR' }}</span>
-                  @if (canMutateTransaction(tx)) {
+                  @if (row.kind === 'payment') {
+                    <span class="cci-cell cci-cell--amt cci-pos">
+                      {{ row.tx.amount | number: '1.2-2':'pt-BR' }}
+                    </span>
+                  } @else {
+                    <span class="cci-cell cci-cell--amt cci-neg">-{{ row.tx.amount | number: '1.2-2':'pt-BR' }}</span>
+                  }
+                  @if (canMutateTransaction(row.tx)) {
                     <button
                       mat-icon-button
                       type="button"
                       [matMenuTriggerFor]="txMenu"
-                      (click)="selectMenuTransaction(tx)"
+                      (click)="selectMenuTransaction(row.tx)"
                       aria-label="Opções do lançamento"
                     >
                       <mat-icon>more_vert</mat-icon>
@@ -127,7 +148,7 @@
                   }
                 </div>
               } @empty {
-                <p class="cci-empty">Nenhuma despesa neste período de fatura.</p>
+                <p class="cci-empty">Nenhuma despesa ou pagamento neste período de fatura.</p>
               }
               <mat-menu #txMenu="matMenu">
                 <button mat-menu-item type="button" (click)="editMenuTransaction()">

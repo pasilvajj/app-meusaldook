@@ -57,24 +57,6 @@
                     <span class="cc-widget-invoice">{{ row.invoiceLabel }}</span>
                   </div>
                   <div class="cc-widget-meta">
-                    <span class="cc-widget-muted">A pagar</span>
-                    <strong class="cc-widget-amt cc-widget-amt--neg">
-                      @if (row.summary.amountToPay < 0) {
-                        -R$ {{ (-row.summary.amountToPay) | number: '1.2-2':'pt-BR' }}
-                      } @else {
-                        R$ {{ row.summary.amountToPay | number: '1.2-2':'pt-BR' }}
-                      }
-                    </strong>
-                  </div>
-                  @if (row.summary.totalPaid > 0) {
-                    <div class="cc-widget-meta">
-                      <span class="cc-widget-muted">Pago</span>
-                      <strong class="cc-widget-amt">
-                        R$ {{ row.summary.totalPaid | number: '1.2-2':'pt-BR' }}
-                      </strong>
-                    </div>
-                  }
-                  <div class="cc-widget-meta">
                     <span class="cc-widget-muted">Disponível</span>
                     <strong class="cc-widget-amt cc-widget-amt--pos">
                       R$ {{ row.summary.available | number: '1.2-2':'pt-BR' }}
@@ -153,8 +135,8 @@
                     <span class="ap-row-date ap-row-date--strong">{{ tx.occurredAt | date: 'dd/MM/yy':'':'pt-BR' }}</span>
                     <div class="ap-row-mid">
                       <span class="ap-pill">{{ tx.accountName }}</span>
-                      @if (tx.description && tx.description.trim()) {
-                        <span class="ap-row-cat">{{ tx.description.trim() }}</span>
+                      @if (transactionDescriptionLabel(tx); as desc) {
+                        <span class="ap-row-cat">{{ desc }}</span>
                       } @else if (tx.categoryName) {
                         <span class="ap-row-cat">{{ tx.categoryName }}</span>
                       }
@@ -206,8 +188,8 @@
                     <span class="ar-row-date ar-row-date--strong">{{ tx.occurredAt | date: 'dd/MM/yy':'':'pt-BR' }}</span>
                     <div class="ar-row-mid">
                       <span class="ar-pill">{{ tx.accountName }}</span>
-                      @if (tx.description && tx.description.trim()) {
-                        <span class="ar-row-cat">{{ tx.description.trim() }}</span>
+                      @if (transactionDescriptionLabel(tx); as desc) {
+                        <span class="ar-row-cat">{{ desc }}</span>
                       } @else if (tx.categoryName) {
                         <span class="ar-row-cat">{{ tx.categoryName }}</span>
                       }

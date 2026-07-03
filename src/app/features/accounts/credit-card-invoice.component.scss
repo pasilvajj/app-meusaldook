@@ -206,6 +206,10 @@
   background: #94a3b8;
 }
 
+.cci-dot--pay {
+  background: var(--cci-teal);
+}
+
 .cci-list {
   padding: 0 !important;
 }
@@ -255,6 +259,29 @@
   border-radius: 4px;
   background: #f1f5f9;
   color: var(--cci-muted);
+}
+
+.cci-row-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.cci-chip {
+  display: inline-block;
+  height: 15px;
+  border-radius: 5px;
+  background-color: #eee;
+  padding: 0 5px;
+  color: #000205;
+  font-size: 0.72rem;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.cci-row--payment {
+  background: rgba(13, 148, 136, 0.04);
 }
 
 .cci-check {

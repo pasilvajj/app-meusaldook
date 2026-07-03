@@ -18,7 +18,7 @@ import { TransactionResponse } from '../../core/models/transaction.models';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { TransactionFormDialogService } from './transaction-form-dialog.service';
 import { TransactionDetailsDialogComponent } from './transaction-details-dialog.component';
-import { installmentDeleteConfirmMessage } from './installment-utils';
+import { installmentDeleteConfirmMessage, formatTransactionDescriptionLabel } from './installment-utils';
 import {
   canMarkExpensePaid,
   canMarkIncomeReceived,
@@ -646,14 +646,6 @@ export class TransactionListComponent implements OnInit {
 
   expenseDescriptionLabel(row: TransactionResponse): string | null {
     if (row.kind !== 'EXPENSE') return null;
-    const raw = (row.description ?? '').trim();
-    if (!raw) return null;
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => !!l && !l.startsWith('Tags:') && !l.startsWith('['));
-    const first = lines[0] ?? '';
-    if (!first) return null;
-    return first.length > 42 ? `${first.slice(0, 42)}...` : first;
+    return formatTransactionDescriptionLabel(row.description, { maxLength: 42 });
   }
 }

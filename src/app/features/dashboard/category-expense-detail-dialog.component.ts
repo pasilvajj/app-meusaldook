@@ -15,6 +15,7 @@ import { CategoryExpenseDetailDialogData } from './category-expense-detail-dialo
 import { accountTypeLabel } from '../accounts/account.models';
 import type { AccountType } from '../accounts/account.models';
 import { localDayEndFromIso, localDayStartFromIso } from '../accounts/credit-card-invoice.util';
+import { formatTransactionDescriptionLabel } from '../transactions/installment-utils';
 
 @Component({
   selector: 'app-category-expense-detail-dialog',
@@ -146,7 +147,7 @@ export class CategoryExpenseDetailDialogComponent implements OnInit {
   }
 
   txnTitle(tx: TransactionResponse): string {
-    return tx.description?.trim() || tx.categoryName;
+    return formatTransactionDescriptionLabel(tx.description) ?? tx.categoryName;
   }
 
   accountMeta(tx: TransactionResponse): AccountRowMeta {

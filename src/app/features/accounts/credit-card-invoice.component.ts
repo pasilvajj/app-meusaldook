@@ -30,6 +30,7 @@ import {
   invoicePaymentQueryRange,
   invoiceViewMonthFromAccount,
   isInvoicePaymentForCard,
+  isInvoicePaymentInCycle,
   localDayEndFromIso,
   localDayStartFromIso,
   txDateLabel,
@@ -41,7 +42,10 @@ import {
   isFixedExpense,
   resolveExpenseEditDialogData,
 } from '../transactions/fixed-expense-utils';
-import { installmentDeleteConfirmMessage } from '../transactions/installment-utils';
+import {
+  installmentDeleteConfirmMessage,
+  formatTransactionDescriptionLabel,
+} from '../transactions/installment-utils';
 
 @Component({
   selector: 'app-credit-card-invoice',
@@ -100,7 +104,30 @@ export class CreditCardInvoiceComponent implements OnInit {
       .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()),
   );
 
+  readonly invoiceListRows = computed(() => {
+    const acc = this.accountMeta();
+    const cycle = this.summary()?.cycle;
+    const expenses = this.expenseRows().map((tx) => ({ kind: 'expense' as const, tx }));
+    const payments =
+      acc && cycle
+        ? this.paymentTransactions()
+            .filter(
+              (t) =>
+                !!t.paidAt &&
+                isInvoicePaymentInCycle(t, acc.name, cycle, acc.publicKey),
+            )
+            .map((tx) => ({ kind: 'payment' as const, tx }))
+        : [];
+    return [...expenses, ...payments].sort(
+      (a, b) => new Date(a.tx.occurredAt).getTime() - new Date(b.tx.occurredAt).getTime(),
+    );
+  });
+
   readonly txDateLabel = txDateLabel;
+
+  txDescriptionLabel(tx: TransactionResponse): string {
+    return formatTransactionDescriptionLabel(tx.description) ?? tx.categoryName;
+  }
 
   ngOnInit(): void {
     this.route.paramMap

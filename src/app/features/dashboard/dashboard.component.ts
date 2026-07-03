@@ -33,7 +33,10 @@ import { MonthlySummaryResponse } from '../../core/models/summary.models';
 import { TransactionResponse } from '../../core/models/transaction.models';
 import type { BudgetGoalMonthResponse } from '../../core/models/budget-goal.models';
 import { TransactionFormDialogService } from '../transactions/transaction-form-dialog.service';
-import { installmentDeleteConfirmMessage } from '../transactions/installment-utils';
+import {
+  installmentDeleteConfirmMessage,
+  formatTransactionDescriptionLabel,
+} from '../transactions/installment-utils';
 import {
   canMarkExpensePaid,
   canMarkIncomeReceived,
@@ -702,13 +705,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.chartPalette[i % this.chartPalette.length] ?? '#94a3b8';
   }
 
-  /** BRL no cartão «Despesas por categoria»: vírgula decimal e espaço fino nos milhares (como no mock). */
   formatDonutBrl(value: number): string {
     const v = Number.isFinite(value) ? value : 0;
     const abs = Math.abs(v);
     const s = abs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const spaced = s.replace(/\./g, '\u202f');
     return v < 0 ? `−${spaced}` : spaced;
+  }
+
+  transactionDescriptionLabel(tx: TransactionResponse): string | null {
+    return formatTransactionDescriptionLabel(tx.description);
   }
 
   incomeTotal(d: MonthlySummaryResponse): number {
