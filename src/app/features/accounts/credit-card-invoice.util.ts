@@ -113,6 +113,115 @@ export function invoiceViewMonthFromAccount(acc: UiAccount): { year: number; mon
   return { year: y, month: m };
 }
 
+export function isViewingOpenInvoiceMonth(
+  acc: UiAccount,
+  year: number,
+  month: number,
+): boolean {
+  const open = invoiceViewMonthFromAccount(acc);
+  return open?.year === year && open?.month === month;
+}
+
+export function dayBeforeIso(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  const prev = new Date(y, m - 1, d - 1, 12, 0, 0, 0);
+  return formatLocalIsoDate(prev);
+}
+
+/**
+ * Primeiro dia em que novas compras entram na fatura aberta.
+ * Após fechar no dia do fechamento, novas compras contam a partir desse dia (não no dia seguinte).
+ */
+export function firstChargeDayForOpenInvoice(
+  acc: UiAccount,
+  reference = new Date(),
+): string {
+  const open = invoiceViewMonthFromAccount(acc);
+  if (!open) return formatLocalIsoDate(reference);
+
+  const openCycle = invoiceCycleForListing(acc, open.year, open.month);
+  if (!openCycle) return formatLocalIsoDate(reference);
+
+  const chargeStart = openCycle.periodStartIso.slice(0, 10);
+  const periodEnd = openCycle.periodEndIso.slice(0, 10);
+  const today = formatLocalIsoDate(reference);
+
+  if (today < chargeStart) return chargeStart;
+  if (today > periodEnd) return periodEnd;
+  return today;
+}
+
+/** Data mínima para nova compra no cartão (fatura aberta). */
+export function minChargeDateForCreditCard(
+  acc: Pick<
+    UiAccount,
+    'accountType' | 'creditCardDueDay' | 'creditCardNextInvoiceDate' | 'creditCardClosingDaysBeforeDue'
+  >,
+  reference = new Date(),
+): Date | null {
+  if (acc.accountType !== 'CREDIT_CARD' || !acc.creditCardNextInvoiceDate || !acc.creditCardDueDay) {
+    return null;
+  }
+  const iso = firstChargeDayForOpenInvoice(acc as UiAccount, reference);
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0, 0);
+}
+
+/** Impede lançar compra em fatura já fechada — empurra para o primeiro dia da fatura aberta. */
+export function clampDateToOpenCreditCardCharge(
+  acc: Pick<
+    UiAccount,
+    'accountType' | 'creditCardDueDay' | 'creditCardNextInvoiceDate' | 'creditCardClosingDaysBeforeDue'
+  >,
+  date: Date,
+  reference = new Date(),
+): Date {
+  const min = minChargeDateForCreditCard(acc, reference);
+  if (!min) return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const selected = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (selected.getTime() < min.getTime()) {
+    return new Date(min.getFullYear(), min.getMonth(), min.getDate());
+  }
+  return selected;
+}
+
+/**
+ * Ciclo para listar/calcular a fatura do mês visualizado.
+ * Regra uniforme: compras no dia do fechamento pertencem à fatura seguinte.
+ * Cada fatura cobre [fechamento da fatura anterior, dia anterior ao próprio fechamento].
+ */
+export function invoiceCycleForListing(
+  acc: UiAccount,
+  year: number,
+  month: number,
+): InvoiceCycle | null {
+  const strict = invoiceCycleForViewMonth(acc, year, month);
+  if (!strict) return null;
+
+  return {
+    ...strict,
+    // strict.periodStart = dia seguinte ao fechamento anterior → recua 1 dia.
+    periodStartIso: dayBeforeIso(strict.periodStartIso),
+    // strict.periodEnd = dia do próprio fechamento → esse dia já é da próxima fatura.
+    periodEndIso: dayBeforeIso(strict.periodEndIso),
+  };
+}
+
+export function occurredLocalDayIso(occurredAt: string): string {
+  const d = new Date(occurredAt);
+  return formatLocalIsoDate(d);
+}
+
+export function isTransactionInInvoiceCycle(
+  tx: TransactionResponse,
+  cycle: InvoiceCycle,
+): boolean {
+  const day = occurredLocalDayIso(tx.occurredAt);
+  const start = cycle.periodStartIso.slice(0, 10);
+  const end = cycle.periodEndIso.slice(0, 10);
+  return day >= start && day <= end;
+}
+
 export function invoiceLabel(cycle: InvoiceCycle): string {
   return `Fatura ${formatBrDate(cycle.dueIso)} (Fechamento ${formatBrDate(cycle.closingIso)})`;
 }
@@ -123,56 +232,6 @@ export function nextInvoiceAfterDue(dueIso: string, dueDay: number): string {
   const ny = m === 12 ? y + 1 : y;
   const nm = m === 12 ? 1 : m + 1;
   return toIsoDate(new Date(ny, nm - 1, clampDueDay(dueDay, ny, nm), 12, 0, 0, 0));
-}
-
-/** Ciclo efetivo da fatura aberta: inclui compras de hoje mesmo antes do fechamento formal. */
-export function effectiveOpenInvoiceCycle(
-  acc: UiAccount,
-  year: number,
-  month: number,
-  reference = new Date(),
-): InvoiceCycle | null {
-  return invoiceCycleForDisplay(acc, year, month, reference);
-}
-
-/** Ciclo para exibição: fatura aberta inclui hoje; faturas anteriores não sobrepõem a aberta. */
-export function invoiceCycleForDisplay(
-  acc: UiAccount,
-  year: number,
-  month: number,
-  reference = new Date(),
-): InvoiceCycle | null {
-  const base = invoiceCycleForViewMonth(acc, year, month);
-  if (!base) return null;
-
-  const open = invoiceViewMonthFromAccount(acc);
-  if (!open) return base;
-
-  const openBase = invoiceCycleForViewMonth(acc, open.year, open.month);
-  if (!openBase) return base;
-
-  const openStartIso = resolveOpenPeriodStartIso(openBase, reference);
-  const isOpenMonth = open.year === year && open.month === month;
-
-  if (isOpenMonth) {
-    if (openStartIso < base.periodStartIso) {
-      return { ...base, periodStartIso: openStartIso };
-    }
-    return base;
-  }
-
-  if (base.periodEndIso >= openStartIso && base.periodStartIso < openStartIso) {
-    const [y, m, d] = openStartIso.split('-').map(Number);
-    const prev = new Date(y, m - 1, d - 1);
-    return { ...base, periodEndIso: formatLocalIsoDate(prev) };
-  }
-
-  return base;
-}
-
-function resolveOpenPeriodStartIso(baseOpenCycle: InvoiceCycle, reference: Date): string {
-  const todayIso = formatLocalIsoDate(reference);
-  return todayIso < baseOpenCycle.periodStartIso ? todayIso : baseOpenCycle.periodStartIso;
 }
 
 /** Data padrão para novo lançamento dentro do período da fatura visualizada. */
@@ -220,6 +279,101 @@ export function invoicePaymentQueryRange(cycle: InvoiceCycle): { from: Date; to:
   const [y, m, d] = cycle.dueIso.slice(0, 10).split('-').map(Number);
   const to = new Date(y, m - 1, d + 30, 23, 59, 59, 999);
   return { from, to };
+}
+
+/** Intervalo após o fechamento do ciclo para buscar parcelas de faturas futuras. */
+export function invoiceFutureInstallmentsQueryRange(cycle: InvoiceCycle): { from: Date; to: Date } {
+  const end = localDayEndFromIso(cycle.periodEndIso);
+  const from = new Date(end);
+  from.setDate(from.getDate() + 1);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setFullYear(to.getFullYear() + 2);
+  to.setHours(23, 59, 59, 999);
+  return { from, to };
+}
+
+/** Soma parcelas com data após o fechamento do ciclo visualizado (próximas faturas). */
+export function computeFutureInstallmentsTotal(
+  txs: TransactionResponse[],
+  cycle: InvoiceCycle,
+): number {
+  const end = cycle.periodEndIso.slice(0, 10);
+  let sum = 0;
+  for (const t of txs) {
+    if (t.kind !== 'EXPENSE') continue;
+    if (isInvoicePaymentTransaction(t)) continue;
+    const day = occurredLocalDayIso(t.occurredAt);
+    if (day <= end) continue;
+    sum += Math.abs(Number(t.amount) || 0);
+  }
+  return sum > 0 ? -sum : 0;
+}
+
+export interface FutureInvoiceGroup {
+  year: number;
+  month: number;
+  cycle: InvoiceCycle;
+  /** Total do grupo, negativo (despesas). */
+  total: number;
+  transactions: TransactionResponse[];
+}
+
+/** Agrupa parcelas futuras (após o fim do ciclo visualizado) por fatura de destino. */
+export function groupFutureInstallmentsByInvoice(
+  acc: UiAccount,
+  txs: TransactionResponse[],
+  viewedCycle: InvoiceCycle,
+): FutureInvoiceGroup[] {
+  const end = viewedCycle.periodEndIso.slice(0, 10);
+  const future = txs
+    .filter(
+      (t) =>
+        t.kind === 'EXPENSE' &&
+        !isInvoicePaymentTransaction(t) &&
+        occurredLocalDayIso(t.occurredAt) > end,
+    )
+    .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+  if (!future.length) return [];
+
+  const lastDay = occurredLocalDayIso(future[future.length - 1].occurredAt);
+  const groups: FutureInvoiceGroup[] = [];
+  let [year, month] = viewedCycle.dueIso.slice(0, 10).split('-').map(Number).slice(0, 2);
+
+  for (let i = 0; i < 36; i++) {
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+    const cycle = invoiceCycleForListing(acc, year, month);
+    if (!cycle) break;
+    const inCycle = future.filter((t) => isTransactionInInvoiceCycle(t, cycle));
+    if (inCycle.length) {
+      const sum = inCycle.reduce((acc2, t) => acc2 + Math.abs(Number(t.amount) || 0), 0);
+      groups.push({ year, month, cycle, total: sum > 0 ? -sum : 0, transactions: inCycle });
+    }
+    if (cycle.periodEndIso.slice(0, 10) >= lastDay) break;
+  }
+  return groups;
+}
+
+const PT_BR_SHORT_MONTHS = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez',
+];
+
+/** «2026-09-11» → «11/set/26». */
+export function formatDueShortLabel(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  const monthLabel = PT_BR_SHORT_MONTHS[Number(m) - 1] ?? m;
+  return `${d}/${monthLabel}/${y.slice(2)}`;
+}
+
+/** «2026-09-11» → «11/09/26». */
+export function formatDueNumericLabel(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return `${d}/${m}/${y.slice(2)}`;
 }
 
 export function isInvoicePaymentForCard(
@@ -271,6 +425,8 @@ export function computeCreditCardInvoiceSummary(
   txs: TransactionResponse[],
   cycle: InvoiceCycle,
   paymentTxs: TransactionResponse[] = [],
+  futureInstallmentTxs: TransactionResponse[] = [],
+  showFutureInstallmentsInDetail = false,
 ): CreditCardInvoiceSummary {
   const start = parseIsoStart(cycle.periodStartIso);
   const end = parseIsoEnd(cycle.periodEndIso);
@@ -279,11 +435,10 @@ export function computeCreditCardInvoiceSummary(
   let reconciled = 0;
   let unreconciled = 0;
   let fixedExpenses = 0;
-  let futureInstallments = 0;
 
-  const now = Date.now();
   for (const t of txs) {
     if (t.kind !== 'EXPENSE') continue;
+    if (!isTransactionInInvoiceCycle(t, cycle)) continue;
     const at = new Date(t.occurredAt).getTime();
     if (at < start || at > end) continue;
     const amt = Math.abs(Number(t.amount) || 0);
@@ -291,12 +446,15 @@ export function computeCreditCardInvoiceSummary(
     const isProjected = Boolean(t.projected);
     if (isProjected) {
       unreconciled += amt;
-      if (at > now) futureInstallments += amt;
     } else {
       reconciled += amt;
     }
     if (t.recurringId) fixedExpenses += amt;
   }
+
+  const futureInstallments = showFutureInstallmentsInDetail
+    ? computeFutureInstallmentsTotal(futureInstallmentTxs, cycle)
+    : 0;
 
   const grossUsed = expenseSum;
   const limit = creditCardLimit(acc);

@@ -165,6 +165,31 @@
   padding: 0 0.25rem !important;
 }
 
+.cci-kv-row--links {
+  align-items: center;
+}
+
+.cci-kv-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.6rem;
+}
+
+.cci-inline-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--cci-teal);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cci-inline-link:hover {
+  text-decoration: underline;
+}
+
 .cci-toolbar {
   display: flex;
   flex-wrap: wrap;

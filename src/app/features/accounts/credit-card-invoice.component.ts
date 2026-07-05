@@ -19,18 +19,25 @@ import { TransactionFormDialogService } from '../transactions/transaction-form-d
 import { uiAccountFromApi } from './account-api.mapper';
 import { AccountFormDialogService } from './account-form-dialog.service';
 import { CloseInvoiceDialogService } from './close-invoice-dialog.service';
+import { FutureInstallmentsDialogService } from './future-installments-dialog.service';
 import { PostInvoicePaymentDialogService } from './post-invoice-payment-dialog.service';
 import {
   CreditCardInvoiceSummary,
   computeCreditCardInvoiceSummary,
   findScheduledInvoicePayment,
+  firstChargeDayForOpenInvoice,
   formatBrDate,
   formatLocalIsoDate,
-  invoiceCycleForDisplay,
+  groupFutureInstallmentsByInvoice,
+  invoiceCycleForListing,
+  invoiceFutureInstallmentsQueryRange,
   invoicePaymentQueryRange,
   invoiceViewMonthFromAccount,
   isInvoicePaymentForCard,
   isInvoicePaymentInCycle,
+  isInvoicePaymentTransaction,
+  isTransactionInInvoiceCycle,
+  isViewingOpenInvoiceMonth,
   localDayEndFromIso,
   localDayStartFromIso,
   txDateLabel,
@@ -72,6 +79,7 @@ export class CreditCardInvoiceComponent implements OnInit {
   private readonly txDialog = inject(TransactionFormDialogService);
   private readonly accountDialog = inject(AccountFormDialogService);
   private readonly closeInvoiceDialog = inject(CloseInvoiceDialogService);
+  private readonly futureInstallmentsDialog = inject(FutureInstallmentsDialogService);
   private readonly postPaymentDialog = inject(PostInvoicePaymentDialogService);
   private readonly accountApi = inject(AccountApiService);
   private readonly snack = inject(MatSnackBar);
@@ -87,6 +95,7 @@ export class CreditCardInvoiceComponent implements OnInit {
   readonly viewMonth = signal(new Date().getMonth() + 1);
   readonly loading = signal(true);
   readonly transactions = signal<TransactionResponse[]>([]);
+  readonly futureTransactions = signal<TransactionResponse[]>([]);
   readonly paymentTransactions = signal<TransactionResponse[]>([]);
   readonly summary = signal<CreditCardInvoiceSummary | null>(null);
   readonly menuTransaction = signal<TransactionResponse | null>(null);
@@ -98,11 +107,23 @@ export class CreditCardInvoiceComponent implements OnInit {
       .replace(/^\w/, (c) => c.toUpperCase());
   });
 
-  readonly expenseRows = computed(() =>
-    this.transactions()
-      .filter((t) => t.kind === 'EXPENSE')
-      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()),
-  );
+  readonly isOpenInvoiceView = computed(() => {
+    const acc = this.accountMeta();
+    if (!acc) return false;
+    return isViewingOpenInvoiceMonth(acc, this.viewYear(), this.viewMonth());
+  });
+
+  readonly expenseRows = computed(() => {
+    const cycle = this.summary()?.cycle;
+    return this.transactions()
+      .filter(
+        (t) =>
+          t.kind === 'EXPENSE' &&
+          (!cycle || isTransactionInInvoiceCycle(t, cycle)) &&
+          !isInvoicePaymentTransaction(t),
+      )
+      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+  });
 
   readonly invoiceListRows = computed(() => {
     const acc = this.accountMeta();
@@ -187,16 +208,16 @@ export class CreditCardInvoiceComponent implements OnInit {
       year: this.viewYear(),
       month: this.viewMonth(),
     };
-    const cycle = invoiceCycleForDisplay(acc, openView.year, openView.month);
+    const cycle = invoiceCycleForListing(acc, openView.year, openView.month);
     if (!cycle) {
       this.txDialog.openExpense({ initialAccountKey: acc.publicKey }).subscribe();
       return;
     }
-    const today = new Date();
+    const chargeDay = firstChargeDayForOpenInvoice(acc);
     this.txDialog
       .openExpense({
         initialAccountKey: acc.publicKey,
-        initialOccurredDate: formatLocalIsoDate(today),
+        initialOccurredDate: chargeDay,
         creditCardInvoiceContext: {
           accountKey: acc.publicKey,
           periodStartIso: cycle.periodStartIso,
@@ -227,6 +248,26 @@ export class CreditCardInvoiceComponent implements OnInit {
       .open({ account: acc, summary: s, scheduledPayment: scheduled ?? undefined })
       .subscribe((result) => {
         if (result?.paid) this.loadCycleData();
+      });
+  }
+
+  openFutureInstallments(): void {
+    const acc = this.accountMeta();
+    const cycle = this.summary()?.cycle;
+    if (!acc || !cycle) return;
+    const groups = groupFutureInstallmentsByInvoice(acc, this.futureTransactions(), cycle);
+    this.futureInstallmentsDialog.openFuture({ account: acc, groups }).subscribe();
+  }
+
+  openAnticipateInstallments(): void {
+    const acc = this.accountMeta();
+    const cycle = this.summary()?.cycle;
+    if (!acc || !cycle) return;
+    const groups = groupFutureInstallmentsByInvoice(acc, this.futureTransactions(), cycle);
+    this.futureInstallmentsDialog
+      .openAnticipate({ account: acc, groups, anticipateToIso: firstChargeDayForOpenInvoice(acc) })
+      .subscribe((result) => {
+        if (result?.anticipated) this.loadCycleData();
       });
   }
 
@@ -334,7 +375,9 @@ export class CreditCardInvoiceComponent implements OnInit {
   private loadCycleData(): void {
     const acc = this.accountMeta();
     if (!acc) return;
-    const cycle = invoiceCycleForDisplay(acc, this.viewYear(), this.viewMonth());
+    const year = this.viewYear();
+    const month = this.viewMonth();
+    const cycle = invoiceCycleForListing(acc, year, month);
     if (!cycle) {
       this.summary.set(null);
       this.transactions.set([]);
@@ -345,6 +388,9 @@ export class CreditCardInvoiceComponent implements OnInit {
     const from = localDayStartFromIso(cycle.periodStartIso);
     const to = localDayEndFromIso(cycle.periodEndIso);
     const paymentRange = invoicePaymentQueryRange(cycle);
+    const includeProjected = isViewingOpenInvoiceMonth(acc, year, month);
+    const isOpen = includeProjected;
+    const futureRange = isOpen ? invoiceFutureInstallmentsQueryRange(cycle) : null;
 
     forkJoin({
       card: this.txApi
@@ -354,9 +400,21 @@ export class CreditCardInvoiceComponent implements OnInit {
           from: from.toISOString(),
           to: to.toISOString(),
           accountPublicKey: acc.publicKey,
-          includeProjected: true,
+          includeProjected,
         })
         .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 }))),
+      futureCard: futureRange
+        ? this.txApi
+            .list({
+              page: 0,
+              size: 5000,
+              from: futureRange.from.toISOString(),
+              to: futureRange.to.toISOString(),
+              accountPublicKey: acc.publicKey,
+              includeProjected: true,
+            })
+            .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 })))
+        : of({ content: [] as TransactionResponse[], totalElements: 0 }),
       payments: this.txApi
         .list({
           page: 0,
@@ -367,13 +425,24 @@ export class CreditCardInvoiceComponent implements OnInit {
         })
         .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 }))),
     }).subscribe({
-      next: ({ card, payments }) => {
+      next: ({ card, futureCard, payments }) => {
         const cardPayments = payments.content.filter((t) =>
           isInvoicePaymentForCard(t, acc.name, acc.publicKey),
         );
-        this.transactions.set(card.content);
+        const inCycle = card.content.filter((t) => isTransactionInInvoiceCycle(t, cycle));
+        this.transactions.set(inCycle);
+        this.futureTransactions.set(futureCard.content);
         this.paymentTransactions.set(cardPayments);
-        this.summary.set(computeCreditCardInvoiceSummary(acc, card.content, cycle, cardPayments));
+        this.summary.set(
+          computeCreditCardInvoiceSummary(
+            acc,
+            inCycle,
+            cycle,
+            cardPayments,
+            futureCard.content,
+            isOpen,
+          ),
+        );
         this.loading.set(false);
       },
       error: () => this.loading.set(false),

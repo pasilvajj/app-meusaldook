@@ -44,7 +44,7 @@
 
           <mat-card class="cci-card cci-card--summary" appearance="outlined">
             <mat-card-header>
-              <mat-card-title>Fatura atual (R$)</mat-card-title>
+              <mat-card-title>{{ isOpenInvoiceView() ? 'Fatura atual (R$)' : 'Fatura fechada (R$)' }}</mat-card-title>
             </mat-card-header>
             <mat-card-content class="cci-kv">
               <div class="cci-kv-row"><span>Fechamento</span><strong>{{ formatDate(s.cycle.closingIso) }}</strong></div>
@@ -54,10 +54,12 @@
               <div class="cci-kv-row cci-kv-row--emph"><span>Total</span><strong class="cci-neg">{{ s.invoiceTotal | number: '1.2-2':'pt-BR' }}</strong></div>
               <div class="cci-kv-row cci-kv-row--emph"><span>Valor a pagar</span><strong class="cci-neg">{{ s.amountToPay | number: '1.2-2':'pt-BR' }}</strong></div>
             </mat-card-content>
-            <mat-card-content class="cci-actions">
-              <button mat-button type="button" class="cci-action-link" (click)="openCloseInvoice()">Fechar fatura</button>
-              <button mat-button type="button" class="cci-action-link" (click)="openPostPayment()">Lançar pagamento</button>
-            </mat-card-content>
+            @if (isOpenInvoiceView()) {
+              <mat-card-content class="cci-actions">
+                <button mat-button type="button" class="cci-action-link" (click)="openCloseInvoice()">Fechar fatura</button>
+                <button mat-button type="button" class="cci-action-link" (click)="openPostPayment()">Lançar pagamento</button>
+              </mat-card-content>
+            }
           </mat-card>
 
           <mat-card class="cci-card" appearance="outlined">
@@ -65,7 +67,17 @@
             <mat-card-content class="cci-kv">
               <div class="cci-kv-row"><span>Despesas</span><strong class="cci-neg">{{ s.expenses | number: '1.2-2':'pt-BR' }}</strong></div>
               <div class="cci-kv-row"><span>Despesas fixas</span><strong>{{ s.fixedExpenses | number: '1.2-2':'pt-BR' }}</strong></div>
-              <div class="cci-kv-row"><span>Parcelas futuras</span><strong>{{ s.futureInstallments | number: '1.2-2':'pt-BR' }}</strong></div>
+              @if (isOpenInvoiceView()) {
+                <div class="cci-kv-row cci-kv-row--links">
+                  <span class="cci-kv-links">
+                    <button type="button" class="cci-inline-link" (click)="openFutureInstallments()">Parcelas futuras</button>
+                    <button type="button" class="cci-inline-link" (click)="openAnticipateInstallments()">Antecipar parcelas</button>
+                  </span>
+                  <strong>{{ s.futureInstallments | number: '1.2-2':'pt-BR' }}</strong>
+                </div>
+              } @else {
+                <div class="cci-kv-row"><span>Parcelas futuras</span><strong>{{ s.futureInstallments | number: '1.2-2':'pt-BR' }}</strong></div>
+              }
             </mat-card-content>
           </mat-card>
 
@@ -161,7 +173,9 @@
             </mat-card-content>
             <mat-divider />
             <mat-card-content class="cci-list-footer">
-              <button mat-stroked-button type="button" (click)="openNewExpense()">Incluir despesa</button>
+              @if (isOpenInvoiceView()) {
+                <button mat-stroked-button type="button" (click)="openNewExpense()">Incluir despesa</button>
+              }
             </mat-card-content>
           </mat-card>
         </section>

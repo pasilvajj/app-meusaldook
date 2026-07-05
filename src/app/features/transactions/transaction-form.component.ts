@@ -23,6 +23,11 @@ import {
 import { parseFixaMeta } from './fixed-expense-utils';
 import { AccountApiService } from '../../core/services/account-api.service';
 import { CategoryApiService } from '../../core/services/category-api.service';
+import { uiAccountFromApi } from '../accounts/account-api.mapper';
+import {
+  clampDateToOpenCreditCardCharge,
+  minChargeDateForCreditCard,
+} from '../accounts/credit-card-invoice.util';
 import { MoneyKind } from '../../core/models/money-kind';
 import { CategoryResponse } from '../../core/models/category.models';
 import type { AccountApiResponse } from '../../core/models/account-api.types';
@@ -103,6 +108,8 @@ export class TransactionFormComponent implements OnInit {
   readonly occurredDateIsFuture = signal(false);
   /** Valor em centavos (inteiro) — entrada tipo POS; evita texto cru tipo «150000» sem máscara após apagar/redigitar. */
   readonly expenseAmountCents = signal(0);
+  /** Data mínima para compras no cartão (após fechamento da fatura anterior). */
+  readonly creditCardMinChargeDate = signal<Date | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     amount: [0, [Validators.min(0.01)]],
@@ -347,7 +354,40 @@ export class TransactionFormComponent implements OnInit {
         this.syncCreditCardPaymentDefaults();
         this.syncPayablesCheckboxWhenHidden();
         this.syncPaymentWhenPayablesChecked();
+        this.applyCreditCardChargeDateFloor();
       });
+  }
+
+  private applyCreditCardChargeDateFloor(): void {
+    if (!this.isCreateExpense() || !this.expenseLayout) {
+      this.creditCardMinChargeDate.set(null);
+      return;
+    }
+    const key = this.form.controls.accountKey.value?.trim() || 'principal';
+    const api = this.accountsByKey().get(key);
+    if (!api || api.accountType !== 'CREDIT_CARD') {
+      this.creditCardMinChargeDate.set(null);
+      return;
+    }
+    const acc = uiAccountFromApi(api);
+    const min = minChargeDateForCreditCard(acc);
+    this.creditCardMinChargeDate.set(min);
+    if (!min) return;
+
+    const cur = this.form.controls.occurredDate.value;
+    if (!(cur instanceof Date) || Number.isNaN(cur.getTime())) return;
+    const clamped = clampDateToOpenCreditCardCharge(acc, cur);
+    if (clamped.getTime() === cur.getTime()) return;
+    this.form.controls.occurredDate.setValue(clamped, { emitEvent: false });
+    this.updateOccurredDateIsFuture(clamped);
+  }
+
+  private resolveCreditCardChargeDate(accountPublicKey: string, date: Date): Date {
+    const api = this.accountsByKey().get(accountPublicKey.trim() || 'principal');
+    if (!api || api.accountType !== 'CREDIT_CARD' || !this.isCreateExpense()) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+    return clampDateToOpenCreditCardCharge(uiAccountFromApi(api), date);
   }
 
   private isCreditCardExpenseAccount(): boolean {
@@ -743,14 +783,18 @@ export class TransactionFormComponent implements OnInit {
       return;
     }
     const v = this.form.getRawValue();
+    const invoiceCtx = this.dialogData?.creditCardInvoiceContext;
+    const accountPublicKey =
+      invoiceCtx?.accountKey?.trim() || v.accountKey?.trim() || 'principal';
 
     let occurredIso: string;
     if (this.expenseLayout) {
-      const d = v.occurredDate;
+      let d = v.occurredDate;
       if (!d || !(d instanceof Date) || Number.isNaN(d.getTime())) {
         this.error.set('Indique uma data válida.');
         return;
       }
+      d = this.resolveCreditCardChargeDate(accountPublicKey, d);
       const pad = (n: number) => String(n).padStart(2, '0');
       const ymd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       occurredIso = new Date(`${ymd}T12:00:00`).toISOString();
@@ -759,9 +803,6 @@ export class TransactionFormComponent implements OnInit {
     }
 
     const description = this.buildDescription(v);
-    const invoiceCtx = this.dialogData?.creditCardInvoiceContext;
-    const accountPublicKey =
-      invoiceCtx?.accountKey?.trim() || v.accountKey?.trim() || 'principal';
 
     let amount = v.amount;
     if (

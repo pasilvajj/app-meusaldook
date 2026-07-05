@@ -1,0 +1,53 @@
+<div mat-dialog-title class="aid-title">
+  <span class="aid-title-text">Antecipar parcelas futuras — {{ data.account.name }}</span>
+  <button mat-icon-button type="button" mat-dialog-close class="aid-close" aria-label="Fechar">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="aid-content">
+  @if (rows.length) {
+    <div class="aid-list">
+      @for (row of rows; track row.tx.id) {
+        <label class="aid-row">
+          <mat-checkbox
+            [checked]="isSelected(row.tx.id)"
+            (change)="toggle(row.tx.id, $event.checked)"
+            [disabled]="saving()"
+          />
+          <span class="aid-due">{{ dueLabel(row.dueIso) }}</span>
+          <span class="aid-desc">
+            <span class="aid-desc-title">{{ txLabel(row.tx) }}</span>
+            <span class="aid-chips">
+              <span class="aid-chip">
+                <mat-icon class="aid-chip-icon">credit_card</mat-icon>{{ row.tx.accountName }}
+              </span>
+              <span class="aid-chip">{{ row.tx.categoryName }}</span>
+            </span>
+          </span>
+          <span class="aid-amt">-{{ row.tx.amount | number: '1.2-2':'pt-BR' }}</span>
+        </label>
+      }
+    </div>
+  } @else {
+    <p class="aid-empty">Não há parcelas futuras para antecipar.</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="aid-actions" align="end">
+  @if (selectedCount() > 0) {
+    <span class="aid-selected-total">
+      {{ selectedCount() }} selecionada(s) · -{{ selectedTotal() | number: '1.2-2':'pt-BR' }}
+    </span>
+  }
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    class="aid-submit"
+    [disabled]="saving() || selectedCount() === 0"
+    (click)="submit()"
+  >
+    {{ saving() ? 'Antecipando…' : 'Antecipar parcelas marcadas' }}
+  </button>
+</mat-dialog-actions>

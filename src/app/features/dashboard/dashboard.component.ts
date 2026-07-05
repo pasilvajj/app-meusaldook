@@ -56,12 +56,14 @@ import {
   CreditCardInvoiceSummary,
   InvoiceCycle,
   computeCreditCardInvoiceSummary,
-  effectiveOpenInvoiceCycle,
+  invoiceCycleForListing,
   invoiceCycleForViewMonth,
+  invoiceFutureInstallmentsQueryRange,
   invoiceLabel,
   invoicePaymentQueryRange,
   invoiceViewMonthFromAccount,
   isInvoicePaymentForCard,
+  isTransactionInInvoiceCycle,
   localDayEndFromIso,
   localDayStartFromIso,
   mergeExpenseCategoriesForDonut,
@@ -232,7 +234,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               const cardLoads = cards.map((account) => {
                 const view = invoiceViewMonthFromAccount(account) ?? { year, month };
                 const cycle =
-                  effectiveOpenInvoiceCycle(account, view.year, view.month) ??
+                  invoiceCycleForListing(account, view.year, view.month) ??
                   invoiceCycleForViewMonth(account, view.year, view.month);
                 if (!cycle) {
                   return of(null);
@@ -240,12 +242,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 const from = localDayStartFromIso(cycle.periodStartIso);
                 const to = localDayEndFromIso(cycle.periodEndIso);
                 const paymentRange = invoicePaymentQueryRange(cycle);
+                const futureRange = invoiceFutureInstallmentsQueryRange(cycle);
                 return forkJoin({
                   card: this.txApi.list({
                     page: 0,
                     size: 5000,
                     from: from.toISOString(),
                     to: to.toISOString(),
+                    accountPublicKey: account.publicKey,
+                    includeProjected: true,
+                  }),
+                  futureCard: this.txApi.list({
+                    page: 0,
+                    size: 5000,
+                    from: futureRange.from.toISOString(),
+                    to: futureRange.to.toISOString(),
                     accountPublicKey: account.publicKey,
                     includeProjected: true,
                   }),
@@ -257,22 +268,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     kind: 'EXPENSE',
                   }),
                 }).pipe(
-                  map(({ card, payments }) => {
+                  map(({ card, futureCard, payments }) => {
                     const cardPayments = payments.content.filter((t) =>
                       isInvoicePaymentForCard(t, account.name, account.publicKey),
                     );
+                    const inCycle = card.content.filter((t) =>
+                      isTransactionInInvoiceCycle(t, cycle),
+                    );
                     const summary = computeCreditCardInvoiceSummary(
                       account,
-                      card.content,
+                      inCycle,
                       cycle,
                       cardPayments,
+                      futureCard.content,
+                      true,
                     );
                     return {
                       account,
                       summary,
                       invoiceLabel: invoiceLabel(cycle),
                       cycle,
-                      transactions: card.content,
+                      transactions: inCycle,
                     } satisfies CreditCardDashboardRow;
                   }),
                   catchError(() => of(null)),

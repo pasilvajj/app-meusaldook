@@ -1,0 +1,43 @@
+<div mat-dialog-title class="fid-title">
+  <span class="fid-title-text">Parcelas futuras {{ data.account.name }}</span>
+  <button mat-icon-button type="button" mat-dialog-close class="fid-close" aria-label="Fechar">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="fid-content">
+  @if (data.groups.length) {
+    <div class="fid-layout">
+      <nav class="fid-months" aria-label="Faturas futuras">
+        @for (g of data.groups; track g.cycle.dueIso; let i = $index) {
+          <button
+            type="button"
+            class="fid-month"
+            [class.fid-month--active]="i === selectedIndex()"
+            (click)="selectMonth(i)"
+          >
+            <span class="fid-month-label">{{ monthLabel(g.cycle.dueIso) }}</span>
+            <span class="fid-month-total">{{ g.total | number: '1.2-2':'pt-BR' }}</span>
+          </button>
+        }
+      </nav>
+
+      <div class="fid-detail">
+        @if (selectedGroup(); as g) {
+          <div class="fid-detail-header">
+            <span class="fid-detail-name">Cartão {{ data.account.name }}</span>
+            <span class="fid-detail-total">{{ g.total | number: '1.2-2':'pt-BR' }}</span>
+          </div>
+          @for (tx of g.transactions; track tx.id) {
+            <div class="fid-detail-row">
+              <span class="fid-detail-desc">{{ txLabel(tx) }}</span>
+              <span class="fid-detail-amt">-{{ tx.amount | number: '1.2-2':'pt-BR' }}</span>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  } @else {
+    <p class="fid-empty">Não há parcelas futuras para este cartão.</p>
+  }
+</mat-dialog-content>

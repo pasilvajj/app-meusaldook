@@ -1,0 +1,159 @@
+:host {
+  --fid-ink: #0f172a;
+  --fid-muted: #475569;
+  --fid-line: #e2e8f0;
+  --fid-teal: #0d9488;
+  --fid-neg: #be123c;
+  color: var(--fid-ink);
+}
+
+.fid-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+}
+
+.fid-close {
+  margin-right: -0.4rem;
+}
+
+.fid-content {
+  padding-top: 0.25rem !important;
+}
+
+.fid-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.fid-months {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--fid-line);
+  padding-right: 0.5rem;
+}
+
+.fid-month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  color: var(--fid-muted);
+}
+
+.fid-month:hover {
+  background: rgba(13, 148, 136, 0.06);
+}
+
+.fid-month--active {
+  border-left-color: var(--fid-teal);
+  background: rgba(13, 148, 136, 0.08);
+  color: var(--fid-ink);
+  font-weight: 600;
+}
+
+.fid-month-total {
+  color: var(--fid-neg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.fid-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fid-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.fid-detail-total {
+  color: var(--fid-neg);
+  font-variant-numeric: tabular-nums;
+}
+
+.fid-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  font-size: 0.86rem;
+}
+
+.fid-detail-row:last-child {
+  border-bottom: none;
+}
+
+.fid-detail-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fid-detail-amt {
+  color: var(--fid-neg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fid-empty {
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  color: var(--fid-muted);
+  font-style: italic;
+}
+
+@media (max-width: 560px) {
+  .fid-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fid-months {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--fid-line);
+    padding-right: 0;
+    padding-bottom: 0.4rem;
+  }
+
+  .fid-month {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 8px 8px 0 0;
+    white-space: nowrap;
+  }
+
+  .fid-month--active {
+    border-bottom-color: var(--fid-teal);
+  }
+}
