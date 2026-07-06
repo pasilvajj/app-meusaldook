@@ -7,6 +7,7 @@ import {
   groupFutureInstallmentsByInvoice,
   invoiceCycleForListing,
   invoiceViewMonthFromAccount,
+  computeCreditCardInvoiceSummary,
   isInvoicePaymentInCycle,
   isTransactionInInvoiceCycle,
   isViewingOpenInvoiceMonth,
@@ -223,6 +224,33 @@ describe('credit-card-invoice.util', () => {
     const august = invoiceCycleForListing(acc, 2026, 8)!;
     expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(true);
     expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(false);
+  });
+
+  it('compra 4x200 compromete 800 do limite; pagar a fatura libera 200', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-08-11' });
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    const p1 = { ...expense('2026-07-05', 1), amount: 200 };
+    const futures = [
+      { ...expense('2026-08-05', 2), amount: 200 },
+      { ...expense('2026-09-05', 3), amount: 200 },
+      { ...expense('2026-10-05', 4), amount: 200 },
+    ];
+
+    const before = computeCreditCardInvoiceSummary(acc, [p1], august, [], futures, true);
+    expect(before.limit).toBe(5000);
+    expect(before.used).toBe(800);
+    expect(before.available).toBe(4200);
+
+    const payment: TransactionResponse = {
+      ...expense('2026-08-11', 9),
+      amount: 200,
+      description: 'Pagamento fatura Cartão',
+      paidAt: '2026-08-11T15:00:00.000Z',
+    };
+    const after = computeCreditCardInvoiceSummary(acc, [p1], august, [payment], futures, true);
+    expect(after.totalPaid).toBe(200);
+    expect(after.used).toBe(600);
+    expect(after.available).toBe(4400);
   });
 
   it('clampDateToOpenCreditCardCharge mantém compra no dia do fechamento', () => {

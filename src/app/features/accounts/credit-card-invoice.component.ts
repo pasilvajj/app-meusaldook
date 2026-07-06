@@ -390,7 +390,8 @@ export class CreditCardInvoiceComponent implements OnInit {
     const paymentRange = invoicePaymentQueryRange(cycle);
     const includeProjected = isViewingOpenInvoiceMonth(acc, year, month);
     const isOpen = includeProjected;
-    const futureRange = isOpen ? invoiceFutureInstallmentsQueryRange(cycle) : null;
+    // Sempre buscar parcelas futuras: elas comprometem o limite mesmo em faturas fechadas.
+    const futureRange = invoiceFutureInstallmentsQueryRange(cycle);
 
     forkJoin({
       card: this.txApi
@@ -403,18 +404,16 @@ export class CreditCardInvoiceComponent implements OnInit {
           includeProjected,
         })
         .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 }))),
-      futureCard: futureRange
-        ? this.txApi
-            .list({
-              page: 0,
-              size: 5000,
-              from: futureRange.from.toISOString(),
-              to: futureRange.to.toISOString(),
-              accountPublicKey: acc.publicKey,
-              includeProjected: true,
-            })
-            .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 })))
-        : of({ content: [] as TransactionResponse[], totalElements: 0 }),
+      futureCard: this.txApi
+        .list({
+          page: 0,
+          size: 5000,
+          from: futureRange.from.toISOString(),
+          to: futureRange.to.toISOString(),
+          accountPublicKey: acc.publicKey,
+          includeProjected: true,
+        })
+        .pipe(catchError(() => of({ content: [] as TransactionResponse[], totalElements: 0 }))),
       payments: this.txApi
         .list({
           page: 0,

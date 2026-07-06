@@ -487,8 +487,11 @@ export function computeCreditCardInvoiceSummary(
   );
   const totalPaid = paidPayments.reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
   const outstanding = Math.max(0, grossUsed - totalPaid);
-  const used = outstanding;
-  const available = Math.max(0, limit - outstanding);
+  // Limite: compra parcelada compromete o valor total (parcelas futuras incluídas);
+  // pagamentos de fatura liberam o limite conforme são feitos.
+  const futureChargesAbs = Math.abs(computeFutureInstallmentsTotal(futureInstallmentTxs, cycle));
+  const used = outstanding + futureChargesAbs;
+  const available = Math.max(0, limit - used);
   const amountToPay = outstanding > 0 ? -outstanding : 0;
 
   return {
