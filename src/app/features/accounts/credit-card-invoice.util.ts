@@ -391,6 +391,28 @@ export function isInvoicePaymentForCard(
   return desc === invoicePaymentDescription(cardName).toLowerCase();
 }
 
+/**
+ * Janela de atribuição de pagamentos: cada pagamento pertence a exatamente uma fatura —
+ * a que fechou mais recentemente. Vai do dia do fechamento desta fatura até a véspera
+ * do fechamento da fatura seguinte.
+ */
+export function invoicePaymentAttributionWindow(
+  cycle: InvoiceCycle,
+): { fromIso: string; toIso: string } {
+  const closingIso = cycle.closingIso.slice(0, 10);
+  const dueIso = cycle.dueIso.slice(0, 10);
+
+  const closingDays = diffLocalDays(closingIso, dueIso);
+  const [dy, dm, dd] = dueIso.split('-').map(Number);
+  const ny = dm === 12 ? dy + 1 : dy;
+  const nm = dm === 12 ? 1 : dm + 1;
+  const nextDue = new Date(ny, nm - 1, clampDueDay(dd, ny, nm), 12, 0, 0, 0);
+  const nextClosing = new Date(nextDue);
+  nextClosing.setDate(nextClosing.getDate() - closingDays);
+
+  return { fromIso: closingIso, toIso: dayBeforeIso(toIsoDate(nextClosing)) };
+}
+
 export function isInvoicePaymentInCycle(
   tx: TransactionResponse,
   cardName: string,
@@ -398,9 +420,9 @@ export function isInvoicePaymentInCycle(
   cardPublicKey?: string,
 ): boolean {
   if (!isInvoicePaymentForCard(tx, cardName, cardPublicKey)) return false;
-  const range = invoicePaymentQueryRange(cycle);
-  const at = new Date(tx.occurredAt).getTime();
-  return at >= range.from.getTime() && at <= range.to.getTime();
+  const day = occurredLocalDayIso(tx.occurredAt);
+  const window = invoicePaymentAttributionWindow(cycle);
+  return day >= window.fromIso && day <= window.toIso;
 }
 
 export function findScheduledInvoicePayment(
@@ -524,6 +546,14 @@ export function mergeExpenseCategoriesForDonut(
 function expenseAmountAsNegative(amount: number): number {
   const abs = Math.abs(Number(amount) || 0);
   return abs === 0 ? 0 : -abs;
+}
+
+function diffLocalDays(fromIso: string, toIso: string): number {
+  const [fy, fm, fd] = fromIso.slice(0, 10).split('-').map(Number);
+  const [ty, tm, td] = toIso.slice(0, 10).split('-').map(Number);
+  const from = new Date(fy, fm - 1, fd, 12, 0, 0, 0).getTime();
+  const to = new Date(ty, tm - 1, td, 12, 0, 0, 0).getTime();
+  return Math.round((to - from) / 86_400_000);
 }
 
 function parseIsoStart(iso: string): number {

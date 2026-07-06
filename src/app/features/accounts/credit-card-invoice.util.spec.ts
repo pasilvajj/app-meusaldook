@@ -7,6 +7,7 @@ import {
   groupFutureInstallmentsByInvoice,
   invoiceCycleForListing,
   invoiceViewMonthFromAccount,
+  isInvoicePaymentInCycle,
   isTransactionInInvoiceCycle,
   isViewingOpenInvoiceMonth,
 } from './credit-card-invoice.util';
@@ -41,6 +42,16 @@ function expense(occurredAt: string, id = 1): TransactionResponse {
     createdAt: `${occurredAt}T15:00:00.000Z`,
     paidAt: null,
     projected: false,
+  };
+}
+
+function invoicePayment(occurredAt: string, id = 90): TransactionResponse {
+  return {
+    ...expense(occurredAt, id),
+    description: 'Pagamento fatura Cartão',
+    accountPublicKey: 'principal',
+    accountName: 'Conta principal',
+    paidAt: `${occurredAt}T15:00:00.000Z`,
   };
 }
 
@@ -134,6 +145,84 @@ describe('credit-card-invoice.util', () => {
     expect(groups[0].transactions.map((t) => t.id)).toEqual([2]);
     expect(groups[1].month).toBe(10);
     expect(groups[1].transactions.map((t) => t.id)).toEqual([3]);
+  });
+
+  it('pagamento em 11/07 conta só na fatura de julho (não repete em ago/set)', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-10-11' });
+    const july = invoiceCycleForListing(acc, 2026, 7)!;
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    const september = invoiceCycleForListing(acc, 2026, 9)!;
+    const payment = invoicePayment('2026-07-11');
+
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(true);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(false);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', september, 'card-1')).toBe(false);
+  });
+
+  it('pagamento no dia do fechamento seguinte pertence à fatura seguinte', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-10-11' });
+    const july = invoiceCycleForListing(acc, 2026, 7)!;
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    const payment = invoicePayment('2026-08-04');
+
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(false);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(true);
+  });
+
+  it('pagamento em 11/07 pertence só à fatura de julho', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-08-11' });
+    const payment: TransactionResponse = {
+      ...expense('2026-07-11', 99),
+      description: 'Pagamento fatura Cartão',
+      paidAt: '2026-07-11T15:00:00.000Z',
+    };
+    const july = invoiceCycleForListing(acc, 2026, 7)!;
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    const september = invoiceCycleForListing(acc, 2026, 9)!;
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(true);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(false);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', september, 'card-1')).toBe(false);
+  });
+
+  it('pagamento no dia do fechamento (04/08) pertence à fatura de agosto', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-08-11' });
+    const payment: TransactionResponse = {
+      ...expense('2026-08-04', 98),
+      description: 'Pagamento fatura Cartão',
+      paidAt: '2026-08-04T15:00:00.000Z',
+    };
+    const july = invoiceCycleForListing(acc, 2026, 7)!;
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(false);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(true);
+  });
+
+  it('pagamento no vencimento 11/07 pertence só à fatura de julho', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-10-11' });
+    const payment: TransactionResponse = {
+      ...expense('2026-07-11', 9),
+      description: 'Pagamento fatura Cartão',
+      paidAt: '2026-07-11T15:00:00.000Z',
+    };
+    const july = invoiceCycleForListing(acc, 2026, 7)!;
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    const september = invoiceCycleForListing(acc, 2026, 9)!;
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(true);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(false);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', september, 'card-1')).toBe(false);
+  });
+
+  it('pagamento atrasado (antes do fechamento seguinte) ainda é da fatura de julho', () => {
+    const acc = card({ creditCardNextInvoiceDate: '2026-10-11' });
+    const payment: TransactionResponse = {
+      ...expense('2026-08-03', 10),
+      description: 'Pagamento fatura Cartão',
+      paidAt: '2026-08-03T15:00:00.000Z',
+    };
+    const july = invoiceCycleForListing(acc, 2026, 7)!;
+    const august = invoiceCycleForListing(acc, 2026, 8)!;
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', july, 'card-1')).toBe(true);
+    expect(isInvoicePaymentInCycle(payment, 'Cartão', august, 'card-1')).toBe(false);
   });
 
   it('clampDateToOpenCreditCardCharge mantém compra no dia do fechamento', () => {

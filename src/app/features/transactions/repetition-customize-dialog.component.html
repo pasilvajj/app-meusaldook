@@ -38,12 +38,26 @@
           </mat-form-field>
           <div class="rep-parcel-row">
             <mat-form-field appearance="outline" class="rep-field">
-              <mat-label>Valor da parcela (R$)</mat-label>
+              <mat-label>{{ amountFieldLabel() }}</mat-label>
               <span matTextPrefix class="rep-prefix">R$&nbsp;</span>
-              <input matInput type="number" min="0" step="0.01" formControlName="parcelAmount" />
+              <input
+                matInput
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                [value]="amountText()"
+                (input)="onAmountInput($event)"
+                (blur)="onAmountBlur()"
+              />
             </mat-form-field>
             <mat-checkbox formControlName="useParcelAmountMode">Valor da parcela</mat-checkbox>
           </div>
+          @if (installmentSummary()) {
+            <div class="rep-summary">
+              <span class="rep-summary-label">Parcelas</span>
+              <span class="rep-summary-value">{{ installmentSummary() }}</span>
+            </div>
+          }
         </div>
       }
 

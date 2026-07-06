@@ -734,6 +734,7 @@ export class TransactionFormComponent implements OnInit {
       parcelAmount: v.parcelAmount,
       useParcelAmountMode: v.useParcelAmountMode,
       defineTotalOccurrences: v.defineTotalOccurrences,
+      totalAmount: this.computeExpenseAmountNumber(),
     };
     this.overlayDialog
       .open(RepetitionCustomizeDialogComponent, {
@@ -759,6 +760,11 @@ export class TransactionFormComponent implements OnInit {
         this.syncParcelValidators();
         if (r.useParcelAmountMode && r.parcelAmount > 0 && r.installmentCount > 0) {
           const total = Math.round(r.parcelAmount * r.installmentCount * 100) / 100;
+          this.form.patchValue({ amount: total });
+          this.expenseAmountCents.set(Math.round(total * 100));
+          this.expenseAmountText.set(formatBrlAmountInput(total));
+        } else if (r.repetition === 'PARCELADO' && !r.useParcelAmountMode && r.totalAmount > 0) {
+          const total = Math.round(r.totalAmount * 100) / 100;
           this.form.patchValue({ amount: total });
           this.expenseAmountCents.set(Math.round(total * 100));
           this.expenseAmountText.set(formatBrlAmountInput(total));

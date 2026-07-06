@@ -13,6 +13,8 @@ export interface RepetitionCustomizeDialogData {
   useParcelAmountMode: boolean;
   /** Só «Fixa»: limitar quantidade de ocorrências (`installmentCount` reutilizado como total). */
   defineTotalOccurrences: boolean;
+  /** Valor total atual do lançamento (pré-preenche o campo de valor do modal). */
+  totalAmount: number;
 }
 
 export type RepetitionCustomizeDialogResult = RepetitionCustomizeDialogData;
