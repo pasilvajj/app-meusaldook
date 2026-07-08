@@ -6,6 +6,7 @@ import type { TransactionResponse } from './transaction.models';
 export interface DashboardResponse {
   summary: MonthlySummaryResponse;
   account: AccountApiResponse;
+  accounts?: AccountApiResponse[];
   goals: BudgetGoalMonthResponse;
   monthTransactions: TransactionResponse[];
   scheduledPayables: TransactionResponse[];

@@ -24,6 +24,7 @@ export class TransactionApiService {
     accountPublicKey?: string;
     includeProjected?: boolean;
     excludeCreditCards?: boolean;
+    creditCardsOnly?: boolean;
   }): Observable<Page<TransactionResponse>> {
     let httpParams = new HttpParams()
       .set('page', String(params.page ?? 0))
@@ -37,6 +38,8 @@ export class TransactionApiService {
       httpParams = httpParams.set('accountPublicKey', params.accountPublicKey);
     if (params.excludeCreditCards)
       httpParams = httpParams.set('excludeCreditCards', 'true');
+    if (params.creditCardsOnly)
+      httpParams = httpParams.set('creditCardsOnly', 'true');
     return this.http.get<Page<TransactionResponse>>(`${this.baseUrl}/api/v1/transactions`, {
       params: httpParams,
     });

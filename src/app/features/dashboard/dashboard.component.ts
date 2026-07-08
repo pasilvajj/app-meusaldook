@@ -54,8 +54,6 @@ import {
 } from '../transactions/fixed-expense-utils';
 import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
 import { DashboardPayablesFabService } from '../../core/services/dashboard-payables-fab.service';
-import { AccountApiService } from '../../core/services/account-api.service';
-import { CategoryApiService } from '../../core/services/category-api.service';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
 import {
@@ -149,8 +147,6 @@ export interface CreditCardDashboardRow {
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
-  private readonly accountApi = inject(AccountApiService);
-  private readonly categoryApi = inject(CategoryApiService);
   private readonly txApi = inject(TransactionApiService);
   private readonly recurringApi = inject(RecurringTransactionApiService);
   private readonly txDialog = inject(TransactionFormDialogService);
@@ -200,6 +196,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private charts: Chart[] = [];
   private chartsHostAlive = true;
+  private lastDashboardLoadMs = 0;
+  private static readonly DASHBOARD_RELOAD_MS = 30_000;
 
   ngOnInit(): void {
     this.loadTrigger$
@@ -218,94 +216,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const mesLongo = now.toLocaleDateString('pt-BR', { month: 'long' });
           this.metasMesNome.set(mesLongo.replace(/^\w/, (c) => c.toLowerCase()));
 
-          return forkJoin({
-            dashboard: this.dashboardApi.load(year, month, 'principal').pipe(
-              catchError(() => {
-                this.payablesFab.setHasFuturePayables(false);
-                this.contasAReceber.set([]);
-                this.loading.set(false);
-                return EMPTY;
-              }),
-            ),
-            accounts: this.accountApi.list().pipe(catchError(() => of([]))),
-            _: this.categoryApi.cardPayment().pipe(catchError(() => of(null))),
-          }).pipe(
-            switchMap(({ dashboard, accounts }) => {
-              if (!dashboard) return EMPTY;
-              const cards = accounts
-                .map(uiAccountFromApi)
-                .filter((a) => a.active && a.accountType === 'CREDIT_CARD');
+          return this.dashboardApi.load(year, month, 'principal').pipe(
+            catchError(() => {
+              this.payablesFab.setHasFuturePayables(false);
+              this.contasAReceber.set([]);
+              this.loading.set(false);
+              return EMPTY;
+            }),
+            switchMap((dashboard) => {
+              const accounts = (dashboard.accounts ?? []).map(uiAccountFromApi);
+              const cards = accounts.filter((a) => a.active && a.accountType === 'CREDIT_CARD');
               if (!cards.length) {
                 return of({ dashboard, creditCardRows: [] as CreditCardDashboardRow[] });
               }
-              const cardLoads = cards.map((account) => {
-                const view = invoiceViewMonthFromAccount(account) ?? { year, month };
-                const cycle =
-                  invoiceCycleForListing(account, view.year, view.month) ??
-                  invoiceCycleForViewMonth(account, view.year, view.month);
-                if (!cycle) {
-                  return of(null);
-                }
-                const from = localDayStartFromIso(cycle.periodStartIso);
-                const to = localDayEndFromIso(cycle.periodEndIso);
-                const paymentRange = invoicePaymentQueryRange(cycle);
-                const futureRange = invoiceFutureInstallmentsQueryRange(cycle);
-                return forkJoin({
-                  card: this.txApi.list({
-                    page: 0,
-                    size: 5000,
-                    from: from.toISOString(),
-                    to: to.toISOString(),
-                    accountPublicKey: account.publicKey,
-                    includeProjected: true,
-                  }),
-                  futureCard: this.txApi.list({
-                    page: 0,
-                    size: 5000,
-                    from: futureRange.from.toISOString(),
-                    to: futureRange.to.toISOString(),
-                    accountPublicKey: account.publicKey,
-                    includeProjected: true,
-                  }),
-                  payments: this.txApi.list({
-                    page: 0,
-                    size: 5000,
-                    from: paymentRange.from.toISOString(),
-                    to: paymentRange.to.toISOString(),
-                    kind: 'EXPENSE',
-                  }),
-                }).pipe(
-                  map(({ card, futureCard, payments }) => {
-                    const cardPayments = payments.content.filter((t) =>
-                      isInvoicePaymentForCard(t, account.name, account.publicKey),
-                    );
-                    const inCycle = card.content.filter((t) =>
-                      isTransactionInInvoiceCycle(t, cycle),
-                    );
-                    const summary = computeCreditCardInvoiceSummary(
-                      account,
-                      inCycle,
-                      cycle,
-                      cardPayments,
-                      futureCard.content,
-                      true,
-                    );
-                    return {
-                      account,
-                      summary,
-                      invoiceLabel: invoiceLabel(cycle),
-                      cycle,
-                      transactions: inCycle,
-                    } satisfies CreditCardDashboardRow;
-                  }),
-                  catchError(() => of(null)),
-                );
-              });
-              return forkJoin(cardLoads).pipe(
-                map((rows) => ({
-                  dashboard,
-                  creditCardRows: rows.filter((r): r is CreditCardDashboardRow => r != null),
-                })),
+              return this.loadCreditCardRows(cards, year, month).pipe(
+                map((creditCardRows) => ({ dashboard, creditCardRows })),
               );
             }),
           );
@@ -381,6 +306,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           );
           this.expenseCategoriesForDonut.set(donutCategories);
 
+          this.lastDashboardLoadMs = Date.now();
           this.loading.set(false);
           runInInjectionContext(this.injector, () => {
             afterNextRender(() => {
@@ -402,7 +328,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => this.loadDashboard());
+      .subscribe(() => this.loadDashboard(false));
   }
 
   openNewTransactionModal(): void {
@@ -503,9 +429,102 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.snack.open(message, 'Fechar', { duration: 6000 });
   }
 
-  private loadDashboard(): void {
+  private loadDashboard(force = true): void {
+    if (
+      !force &&
+      this.data() !== null &&
+      Date.now() - this.lastDashboardLoadMs < DashboardComponent.DASHBOARD_RELOAD_MS
+    ) {
+      return;
+    }
     this.loadTrigger$.next();
   }
+
+  /** Uma consulta para todos os cartões + uma para pagamentos de fatura (em vez de 3× por cartão). */
+  private loadCreditCardRows(cards: UiAccount[], year: number, month: number) {
+    type CardCycle = { account: UiAccount; cycle: InvoiceCycle };
+    const cardCycles: CardCycle[] = [];
+    for (const account of cards) {
+      const view = invoiceViewMonthFromAccount(account) ?? { year, month };
+      const cycle =
+        invoiceCycleForListing(account, view.year, view.month) ??
+        invoiceCycleForViewMonth(account, view.year, view.month);
+      if (cycle) {
+        cardCycles.push({ account, cycle });
+      }
+    }
+    if (!cardCycles.length) {
+      return of([] as CreditCardDashboardRow[]);
+    }
+
+    let cardFromMs = Number.POSITIVE_INFINITY;
+    let cardToMs = Number.NEGATIVE_INFINITY;
+    let paymentFromMs = Number.POSITIVE_INFINITY;
+    let paymentToMs = Number.NEGATIVE_INFINITY;
+    for (const { cycle } of cardCycles) {
+      const periodFrom = localDayStartFromIso(cycle.periodStartIso).getTime();
+      const periodTo = localDayEndFromIso(cycle.periodEndIso).getTime();
+      const futureRange = invoiceFutureInstallmentsQueryRange(cycle);
+      cardFromMs = Math.min(cardFromMs, periodFrom, futureRange.from.getTime());
+      cardToMs = Math.max(cardToMs, periodTo, futureRange.to.getTime());
+      const paymentRange = invoicePaymentQueryRange(cycle);
+      paymentFromMs = Math.min(paymentFromMs, paymentRange.from.getTime());
+      paymentToMs = Math.max(paymentToMs, paymentRange.to.getTime());
+    }
+
+    return forkJoin({
+      cardTxs: this.txApi.list({
+        page: 0,
+        size: 5000,
+        from: new Date(cardFromMs).toISOString(),
+        to: new Date(cardToMs).toISOString(),
+        creditCardsOnly: true,
+        includeProjected: true,
+      }),
+      payments: this.txApi.list({
+        page: 0,
+        size: 5000,
+        from: new Date(paymentFromMs).toISOString(),
+        to: new Date(paymentToMs).toISOString(),
+        kind: 'EXPENSE',
+      }),
+    }).pipe(
+      map(({ cardTxs, payments }) => {
+        const allCardTxs = cardTxs.content;
+        return cardCycles.map(({ account, cycle }) => {
+          const cardPayments = payments.content.filter((t) =>
+            isInvoicePaymentForCard(t, account.name, account.publicKey),
+          );
+          const inCycle = allCardTxs.filter(
+            (t) => t.accountPublicKey === account.publicKey && isTransactionInInvoiceCycle(t, cycle),
+          );
+          const futureRange = invoiceFutureInstallmentsQueryRange(cycle);
+          const futureCard = allCardTxs.filter((t) => {
+            if (t.accountPublicKey !== account.publicKey) return false;
+            const at = new Date(t.occurredAt).getTime();
+            return at >= futureRange.from.getTime() && at <= futureRange.to.getTime();
+          });
+          const summary = computeCreditCardInvoiceSummary(
+            account,
+            inCycle,
+            cycle,
+            cardPayments,
+            futureCard,
+            true,
+          );
+          return {
+            account,
+            summary,
+            invoiceLabel: invoiceLabel(cycle),
+            cycle,
+            transactions: inCycle,
+          } satisfies CreditCardDashboardRow;
+        });
+      }),
+      catchError(() => of([] as CreditCardDashboardRow[])),
+    );
+  }
+
 
   ngOnDestroy(): void {
     this.chartsHostAlive = false;
