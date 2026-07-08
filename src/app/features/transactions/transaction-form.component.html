@@ -23,15 +23,16 @@
         <div class="tx-exp-grid">
           <div class="tx-exp-row tx-exp-row--3">
             <mat-form-field appearance="outline" class="tx-field tx-field--amount">
-              <mat-label>Valor (R$)</mat-label>
+              <mat-label>{{ expenseAmountFieldLabel() }}</mat-label>
               <span matTextPrefix class="tx-prefix">R$&nbsp;</span>
               <input
                 matInput
                 type="text"
                 inputmode="decimal"
                 autocomplete="off"
-                [readonly]="isValorLockedByParcel()"
                 [value]="expenseAmountText()"
+                (focus)="onExpenseAmountFocus($event)"
+                (click)="onExpenseAmountClick($event)"
                 (input)="onExpenseAmountInput($event)"
                 (blur)="onExpenseAmountBlur()"
               />

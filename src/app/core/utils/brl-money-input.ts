@@ -1,3 +1,19 @@
+/** Posiciona o cursor no fim do campo (máscara monetária estilo POS). */
+export function placeAmountInputCursorAtEnd(input: HTMLInputElement | null | undefined): void {
+  if (!input) return;
+  const move = () => {
+    const len = input.value.length;
+    try {
+      input.setSelectionRange(len, len);
+    } catch {
+      // input indisponível ou tipo sem seleção
+    }
+  };
+  move();
+  queueMicrotask(move);
+  requestAnimationFrame(move);
+}
+
 /** Formata valor para entrada pt-BR (sem prefixo R$). */
 export function formatBrlAmountInput(n: number): string {
   const v = Number.isFinite(n) ? n : 0;

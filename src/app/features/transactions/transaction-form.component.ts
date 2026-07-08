@@ -17,6 +17,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
 import { apiErrorMessage } from '../../core/utils/api-error.util';
+import { placeAmountInputCursorAtEnd } from '../../core/utils/brl-money-input';
 import {
   RecurringTransactionApiService,
   type RecurringTransactionResponse,
@@ -584,8 +585,15 @@ export class TransactionFormComponent implements OnInit {
     }
   }
 
+  onExpenseAmountFocus(ev: FocusEvent): void {
+    placeAmountInputCursorAtEnd(ev.target as HTMLInputElement);
+  }
+
+  onExpenseAmountClick(ev: MouseEvent): void {
+    placeAmountInputCursorAtEnd(ev.target as HTMLInputElement);
+  }
+
   onExpenseAmountInput(ev: Event): void {
-    if (this.isValorLockedByParcel()) return;
     const e = ev as InputEvent;
     const input = ev.target as HTMLInputElement;
 
@@ -628,30 +636,41 @@ export class TransactionFormComponent implements OnInit {
     }
 
     const cents = this.expenseAmountCents();
-    const amount = cents / 100;
-    this.expenseAmountText.set(formatBrlAmountInput(amount));
-    this.syncAmountNumericFromUi();
+    const unit = cents / 100;
+    this.expenseAmountText.set(formatBrlAmountInput(unit));
+    this.patchAmountFromDisplayUnit(unit);
+    placeAmountInputCursorAtEnd(input);
   }
 
   onExpenseAmountBlur(): void {
-    if (this.isValorLockedByParcel()) return;
     this.syncAmountNumericFromUi();
-    const n = this.form.controls.amount.value;
-    this.expenseAmountCents.set(Number.isFinite(n) ? Math.round(n * 100) : 0);
-    this.expenseAmountText.set(formatBrlAmountInput(n));
+    const v = this.form.getRawValue();
+    const display =
+      v.repetition === 'PARCELADO' && v.useParcelAmountMode && v.parcelAmount > 0
+        ? v.parcelAmount
+        : v.amount;
+    this.expenseAmountCents.set(Number.isFinite(display) ? Math.round(display * 100) : 0);
+    this.expenseAmountText.set(formatBrlAmountInput(display));
     this.form.controls.amount.markAsTouched();
   }
 
-  /** Total definido por parcela × quantidade (modo «Valor da parcela»). */
-  isValorLockedByParcel(): boolean {
+  expenseAmountFieldLabel(): string {
     const v = this.form.getRawValue();
-    return (
-      this.expenseLayout &&
-      v.repetition === 'PARCELADO' &&
-      v.useParcelAmountMode &&
-      v.parcelAmount > 0 &&
-      v.installmentCount > 0
-    );
+    return v.repetition === 'PARCELADO' && v.useParcelAmountMode
+      ? 'Valor da parcela (R$)'
+      : 'Valor (R$)';
+  }
+
+  /** Atualiza `amount` (total) e `parcelAmount` conforme o modo de entrada. */
+  private patchAmountFromDisplayUnit(unit: number): void {
+    const v = this.form.getRawValue();
+    if (v.repetition === 'PARCELADO' && v.useParcelAmountMode && v.installmentCount > 0) {
+      const total = Math.round(unit * v.installmentCount * 100) / 100;
+      this.form.patchValue({ parcelAmount: unit, amount: total }, { emitEvent: false });
+    } else {
+      this.form.patchValue({ amount: unit, parcelAmount: 0 }, { emitEvent: false });
+    }
+    this.form.controls.amount.updateValueAndValidity({ emitEvent: true });
   }
 
   /**
@@ -670,10 +689,10 @@ export class TransactionFormComponent implements OnInit {
       this.expenseLayout &&
       v.repetition === 'PARCELADO' &&
       v.useParcelAmountMode &&
-      v.parcelAmount > 0 &&
       v.installmentCount > 0
     ) {
-      return Math.round(v.parcelAmount * v.installmentCount * 100) / 100;
+      const parcel = v.parcelAmount > 0 ? v.parcelAmount : this.expenseAmountCents() / 100;
+      return Math.round(parcel * v.installmentCount * 100) / 100;
     }
     if (this.expenseLayout) {
       return this.expenseAmountCents() / 100;
@@ -681,16 +700,22 @@ export class TransactionFormComponent implements OnInit {
     return Math.round(parsePtBrAmountInput(this.expenseAmountText()) * 100) / 100;
   }
 
-  /** Mantém `amount` alinhado ao texto ou ao total parcelado (evita gravar com campo «vazio»). */
+  /** Mantém `amount` (total) alinhado ao valor exibido (total ou parcela × n). */
   private syncAmountNumericFromUi(): void {
     if (!this.expenseLayout) return;
     const v = this.form.getRawValue();
-    const n = this.computeExpenseAmountNumber();
-    if (v.repetition === 'PARCELADO' && v.useParcelAmountMode && v.parcelAmount > 0 && v.installmentCount > 0) {
-      this.expenseAmountCents.set(Math.round(n * 100));
-      this.expenseAmountText.set(formatBrlAmountInput(n));
+
+    if (v.repetition === 'PARCELADO' && v.useParcelAmountMode && v.installmentCount > 0) {
+      const parcel =
+        v.parcelAmount > 0 ? v.parcelAmount : Math.round((this.expenseAmountCents() / 100) * 100) / 100;
+      const total = Math.round(parcel * v.installmentCount * 100) / 100;
+      this.expenseAmountCents.set(Math.round(parcel * 100));
+      this.expenseAmountText.set(formatBrlAmountInput(parcel));
+      this.form.patchValue({ amount: total, parcelAmount: parcel }, { emitEvent: false });
+    } else {
+      const total = Math.round((this.expenseAmountCents() / 100) * 100) / 100;
+      this.form.patchValue({ amount: total, parcelAmount: 0 }, { emitEvent: false });
     }
-    this.form.patchValue({ amount: n });
     this.form.controls.amount.updateValueAndValidity({ emitEvent: true });
   }
 
@@ -727,13 +752,19 @@ export class TransactionFormComponent implements OnInit {
 
   openRepetitionCustomize(): void {
     const v = this.form.getRawValue();
+    const parcelForDialog =
+      v.useParcelAmountMode && v.parcelAmount > 0
+        ? v.parcelAmount
+        : v.useParcelAmountMode
+          ? this.expenseAmountCents() / 100
+          : v.parcelAmount;
     const data: RepetitionCustomizeDialogData = {
       repetition: v.repetition,
       periodicity: v.installmentPeriodicity,
       everyNMonths: v.parcelEveryMonths,
       installmentCount: v.installmentCount,
       initialInstallment: v.initialInstallment,
-      parcelAmount: v.parcelAmount,
+      parcelAmount: parcelForDialog,
       useParcelAmountMode: v.useParcelAmountMode,
       defineTotalOccurrences: v.defineTotalOccurrences,
       totalAmount: this.computeExpenseAmountNumber(),
@@ -760,16 +791,10 @@ export class TransactionFormComponent implements OnInit {
           defineTotalOccurrences: r.defineTotalOccurrences,
         });
         this.syncParcelValidators();
-        if (r.useParcelAmountMode && r.parcelAmount > 0 && r.installmentCount > 0) {
-          const total = Math.round(r.parcelAmount * r.installmentCount * 100) / 100;
-          this.form.patchValue({ amount: total });
-          this.expenseAmountCents.set(Math.round(total * 100));
-          this.expenseAmountText.set(formatBrlAmountInput(total));
-        } else if (r.repetition === 'PARCELADO' && !r.useParcelAmountMode && r.totalAmount > 0) {
-          const total = Math.round(r.totalAmount * 100) / 100;
-          this.form.patchValue({ amount: total });
-          this.expenseAmountCents.set(Math.round(total * 100));
-          this.expenseAmountText.set(formatBrlAmountInput(total));
+        if (r.repetition === 'PARCELADO' && r.useParcelAmountMode && r.parcelAmount > 0) {
+          this.expenseAmountCents.set(Math.round(r.parcelAmount * 100));
+        } else if (r.totalAmount > 0) {
+          this.expenseAmountCents.set(Math.round(r.totalAmount * 100));
         }
         this.syncAmountNumericFromUi();
       });
