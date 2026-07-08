@@ -245,7 +245,7 @@
                       [attr.aria-label]="'Ver lançamentos de ' + row.categoryName"
                     >
                       <span class="dot" [style.background]="legendColor($index)"></span>
-                      <span class="legend-name">{{ row.categoryName }}</span>
+                      <span class="legend-name" [title]="row.categoryName">{{ row.categoryName }}</span>
                       <span class="legend-pct">{{ categorySharePct(row) }}%</span>
                       <span class="legend-val negative">R$ {{ formatDonutBrl(row.total) }}</span>
                     </button>
