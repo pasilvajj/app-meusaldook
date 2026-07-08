@@ -195,6 +195,13 @@
   letter-spacing: -0.02em;
 }
 
+.split-hint {
+  margin: -0.45rem 0 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--rep-muted);
+}
+
 .donut-block {
   display: flex;
   flex-direction: column;
@@ -282,6 +289,63 @@
   border-top: 1px solid var(--rep-line);
   font-size: 0.92rem;
   font-weight: 600;
+}
+
+.split-footer--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.split-footer-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.split-footer-row--muted {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--rep-muted);
+}
+
+.split-footer-row--total {
+  margin-top: 0.35rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--rep-line);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.legend-invoice-payment {
+  margin-top: 0.15rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.55);
+}
+
+.dot--muted {
+  background: #94a3b8 !important;
+}
+
+.legend-name--hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 500;
+  color: var(--rep-muted);
+  white-space: normal;
+}
+
+.legend-info {
+  font-size: 0.95rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--rep-muted);
+  cursor: help;
+  vertical-align: middle;
 }
 
 .split-footer-val {

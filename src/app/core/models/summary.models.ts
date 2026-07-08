@@ -8,4 +8,6 @@ export interface MonthlySummaryResponse {
   byCategory: { categoryName: string; total: number }[];
   /** Só receitas por categoria (metas de receita). Opcional em respostas antigas da API. */
   byIncomeCategory?: { categoryName: string; total: number }[];
+  /** Pagamentos de fatura no caixa (excluídos do gráfico por categoria). */
+  invoicePaymentTotal?: number;
 }

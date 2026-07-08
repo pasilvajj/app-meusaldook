@@ -732,6 +732,56 @@
   color: var(--dash-pink);
 }
 
+.donut-total-sub {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.12rem;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.45);
+  width: 100%;
+}
+
+.donut-total-sub--cash {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--dash-line);
+}
+
+.donut-total-sublabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--dash-muted);
+  max-width: 9rem;
+  text-align: right;
+  line-height: 1.25;
+}
+
+.donut-total-info {
+  font-size: 0.85rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  cursor: help;
+}
+
+.donut-total-subamount {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.donut-total-subamount.negative {
+  color: var(--dash-pink);
+}
+
 @media (max-width: 900px) {
   .donut-layout {
     grid-template-columns: minmax(120px, 1fr) minmax(0, 1fr);

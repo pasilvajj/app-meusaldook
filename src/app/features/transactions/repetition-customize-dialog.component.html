@@ -54,7 +54,7 @@
           </div>
           @if (installmentSummary()) {
             <div class="rep-summary">
-              <span class="rep-summary-label">Parcelas</span>
+              <span class="rep-summary-label">{{ isParcelValueMode() ? 'Total' : 'Parcelas' }}</span>
               <span class="rep-summary-value">{{ installmentSummary() }}</span>
             </div>
           }

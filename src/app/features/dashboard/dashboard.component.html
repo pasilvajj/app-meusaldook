@@ -220,6 +220,9 @@
        <mat-card class="widget widget--donut" appearance="outlined">
         <mat-card-header>
           <mat-card-title>Despesas por categoria</mat-card-title>
+          <mat-card-subtitle>
+            Compras no caixa e no cartão (fatura aberta). Pagamento de fatura aparece à parte.
+          </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content class="donut-card-content">
           <div class="donut-layout">
@@ -250,13 +253,36 @@
               </ul>
             </div>
             @if (donutCategories().length > 0) {
-              <aside class="donut-total-aside" aria-label="Total das despesas por categoria">
+              <aside class="donut-total-aside" aria-label="Totais de despesas">
                 <div class="donut-total-stack">
                   <span class="donut-total-rule" aria-hidden="true"></span>
-                  <span class="donut-total-label">Total</span>
+                  <span class="donut-total-label">Total categorizado</span>
                   <strong class="donut-total-amount negative">
                     R$ {{ formatDonutBrl(donutCategoriesTotal()) }}
                   </strong>
+                  @if (invoicePaymentTotal() > 0) {
+                    <div class="donut-total-sub">
+                      <span class="donut-total-sublabel">
+                        Pagamento de fatura
+                        <mat-icon
+                          class="donut-total-info"
+                          matTooltip="{{ invoicePaymentHint }}"
+                          aria-label="O que é pagamento de fatura"
+                        >
+                          info_outline
+                        </mat-icon>
+                      </span>
+                      <strong class="donut-total-subamount negative">
+                        R$ {{ formatDonutBrl(-invoicePaymentTotal()) }}
+                      </strong>
+                    </div>
+                    <div class="donut-total-sub donut-total-sub--cash">
+                      <span class="donut-total-sublabel">Total saídas (caixa)</span>
+                      <strong class="donut-total-subamount negative">
+                        R$ {{ formatDonutBrl(-cashExpenseTotal()) }}
+                      </strong>
+                    </div>
+                  }
                 </div>
               </aside>
             }

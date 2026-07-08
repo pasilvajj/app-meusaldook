@@ -18,8 +18,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SummaryApiService } from '../../core/services/summary-api.service';
 import type { MonthlySummaryResponse } from '../../core/models/summary.models';
+import {
+  INVOICE_PAYMENT_HINT,
+  categorizedExpenseTotal as sumCategorizedExpenses,
+  expenseKindTotal,
+  invoicePaymentExpenseTotal,
+} from '../../core/utils/expense-summary.util';
 
 Chart.register(...registerables);
 
@@ -36,6 +43,7 @@ const CHART_PALETTE = ['#0d9488', '#2563eb', '#d97706', '#a855f7', '#db2777', '#
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatTooltipModule,
   ],
   templateUrl: './category-totals-report.component.html',
   styleUrl: './category-totals-report.component.scss',
@@ -44,6 +52,8 @@ export class CategoryTotalsReportComponent implements OnDestroy {
   private readonly summaryApi = inject(SummaryApiService);
   private readonly snack = inject(MatSnackBar);
   private readonly injector = inject(Injector);
+
+  readonly invoicePaymentHint = INVOICE_PAYMENT_HINT;
 
   @ViewChild('expenseDonut') private expenseDonut?: ElementRef<HTMLCanvasElement>;
   @ViewChild('incomeDonut') private incomeDonut?: ElementRef<HTMLCanvasElement>;
@@ -79,7 +89,7 @@ export class CategoryTotalsReportComponent implements OnDestroy {
   load(): void {
     this.loading.set(true);
     const d = this.focusDate();
-    this.summaryApi.monthly(d.getFullYear(), d.getMonth() + 1).subscribe({
+    this.summaryApi.monthly(d.getFullYear(), d.getMonth() + 1, 'principal').subscribe({
       next: (summary) => {
         this.summary.set(summary);
         this.loading.set(false);
@@ -111,7 +121,15 @@ export class CategoryTotalsReportComponent implements OnDestroy {
   }
 
   expenseTotal(summary: MonthlySummaryResponse): number {
-    return Math.abs(summary.byKind.find((k) => k.kind === 'EXPENSE')?.total ?? 0);
+    return expenseKindTotal(summary);
+  }
+
+  categorizedExpenseTotal(summary: MonthlySummaryResponse): number {
+    return sumCategorizedExpenses(summary);
+  }
+
+  invoicePaymentTotal(summary: MonthlySummaryResponse): number {
+    return invoicePaymentExpenseTotal(summary);
   }
 
   netTotal(summary: MonthlySummaryResponse): number {

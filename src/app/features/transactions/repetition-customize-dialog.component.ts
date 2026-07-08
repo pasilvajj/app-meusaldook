@@ -124,16 +124,16 @@ export class RepetitionCustomizeDialogComponent {
     return this.isParcelValueMode() ? this.amountCents() * Math.max(1, count) : this.amountCents();
   }
 
-  /** «2 parcelas de R$ 30,00». */
+  /** Resumo calculado: parcela unitária (modo total) ou total (modo parcela). */
   installmentSummary(): string {
     const count = this.installmentCountValue();
     if (count < 1 || this.amountCents() === 0) return '';
-    const parcel = formatBrlAmountInput(this.parcelValueCents() / 100);
-    const label = `${count} parcela${count > 1 ? 's' : ''} de R$ ${parcel}`;
     if (this.isParcelValueMode()) {
-      return `${label} · Total R$ ${formatBrlAmountInput(this.totalValueCents() / 100)}`;
+      const total = formatBrlAmountInput(this.totalValueCents() / 100);
+      return `${count} parcela${count > 1 ? 's' : ''} · Total R$ ${total}`;
     }
-    return label;
+    const parcel = formatBrlAmountInput(this.parcelValueCents() / 100);
+    return `${count} parcela${count > 1 ? 's' : ''} de R$ ${parcel}`;
   }
 
   private syncRepValidators(): void {

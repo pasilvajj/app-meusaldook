@@ -27,9 +27,15 @@ import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
 import { MonthlySummaryResponse } from '../../core/models/summary.models';
+import {
+  INVOICE_PAYMENT_HINT,
+  expenseKindTotal,
+  invoicePaymentExpenseTotal,
+} from '../../core/utils/expense-summary.util';
 import { TransactionResponse } from '../../core/models/transaction.models';
 import type { BudgetGoalMonthResponse } from '../../core/models/budget-goal.models';
 import { TransactionFormDialogService } from '../transactions/transaction-form-dialog.service';
@@ -132,6 +138,7 @@ export interface CreditCardDashboardRow {
     MatMenuModule,
     MatCheckboxModule,
     MatSnackBarModule,
+    MatTooltipModule,
     RouterLink,
     DecimalPipe,
     DatePipe,
@@ -715,6 +722,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   donutCategoriesTotal(): number {
     const sum = this.donutCategories().reduce((s, c) => s + Math.abs(c.total), 0);
     return sum === 0 ? 0 : -sum;
+  }
+
+  readonly invoicePaymentHint = INVOICE_PAYMENT_HINT;
+
+  invoicePaymentTotal(): number {
+    const summary = this.data();
+    return summary ? invoicePaymentExpenseTotal(summary) : 0;
+  }
+
+  cashExpenseTotal(): number {
+    const summary = this.data();
+    return summary ? expenseKindTotal(summary) : 0;
   }
 
   legendColor(i: number): string {
