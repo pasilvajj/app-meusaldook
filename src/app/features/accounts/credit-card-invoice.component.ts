@@ -285,6 +285,10 @@ export class CreditCardInvoiceComponent implements OnInit {
   }
 
   canMutateTransaction(tx: TransactionResponse): boolean {
+    if (isFixedExpense(tx)) {
+      const target = resolveExpenseEditDialogData(tx);
+      return !!(target.recurringId || target.transactionId);
+    }
     return tx.id > 0 && !tx.projected;
   }
 
@@ -388,8 +392,9 @@ export class CreditCardInvoiceComponent implements OnInit {
     const from = localDayStartFromIso(cycle.periodStartIso);
     const to = localDayEndFromIso(cycle.periodEndIso);
     const paymentRange = invoicePaymentQueryRange(cycle);
-    const includeProjected = isViewingOpenInvoiceMonth(acc, year, month);
-    const isOpen = includeProjected;
+    const isOpen = isViewingOpenInvoiceMonth(acc, year, month);
+    // Despesas fixas são projeções recorrentes — incluir em qualquer mês da fatura.
+    const includeProjected = true;
     // Sempre buscar parcelas futuras: elas comprometem o limite mesmo em faturas fechadas.
     const futureRange = invoiceFutureInstallmentsQueryRange(cycle);
 
