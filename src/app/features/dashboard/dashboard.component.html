@@ -7,7 +7,8 @@
   @if (data(); as d) {
   <div class="overview">
       <div class="bento">
-      <mat-card class="widget widget--hug widget--wide" appearance="outlined">
+        <div class="bento-col bento-col--left">
+      <mat-card class="widget widget--hug" appearance="outlined">
         <mat-card-header>
           <mat-card-title>Saldos de caixa</mat-card-title>
           <mat-card-subtitle>Confirmado vs. projetado (mês corrente)</mat-card-subtitle>
@@ -38,38 +39,7 @@
         </mat-card-content>
       </mat-card>
 
-      @if (creditCardRows().length > 0) {
-        <mat-card class="widget widget--hug widget--creditcards" appearance="outlined">
-          <mat-card-header>
-            <mat-card-title>Cartões de crédito</mat-card-title>
-          </mat-card-header>
-          <mat-card-content class="cc-widget-body">
-            @for (row of creditCardRows(); track row.account.serverId) {
-              <article class="cc-widget-row">
-                <span class="cc-widget-icon" aria-hidden="true">
-                  <mat-icon>credit_card</mat-icon>
-                </span>
-                <div class="cc-widget-main">
-                  <a class="cc-widget-name" [routerLink]="['/contas', 'fatura', row.account.publicKey]">
-                    {{ row.account.name }}
-                  </a>
-                  <div class="cc-widget-meta cc-widget-meta--invoice">
-                    <span class="cc-widget-invoice">{{ row.invoiceLabel }}</span>
-                  </div>
-                  <div class="cc-widget-meta">
-                    <span class="cc-widget-muted">Disponível</span>
-                    <strong class="cc-widget-amt cc-widget-amt--pos">
-                      R$ {{ row.summary.available | number: '1.2-2':'pt-BR' }}
-                    </strong>
-                  </div>
-                </div>
-              </article>
-            }
-          </mat-card-content>
-        </mat-card>
-      }
-
-      <mat-card class="widget widget--hug widget--chart widget--flux" appearance="outlined">
+      <mat-card class="widget widget--chart widget--flux" appearance="outlined">
         <mat-card-header>
           <mat-card-title>Fluxo de caixa</mat-card-title>
           <mat-card-subtitle>Saldo acumulado ao longo do mês</mat-card-subtitle>
@@ -216,8 +186,41 @@
           }
         </mat-card-content>
       </mat-card>
+        </div>
 
-       <mat-card class="widget widget--donut" appearance="outlined">
+        <div class="bento-col bento-col--right">
+      @if (creditCardRows().length > 0) {
+        <mat-card class="widget widget--hug widget--creditcards" appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Cartões de crédito</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="cc-widget-body">
+            @for (row of creditCardRows(); track row.account.serverId) {
+              <article class="cc-widget-row">
+                <span class="cc-widget-icon" aria-hidden="true">
+                  <mat-icon>credit_card</mat-icon>
+                </span>
+                <div class="cc-widget-main">
+                  <a class="cc-widget-name" [routerLink]="['/contas', 'fatura', row.account.publicKey]">
+                    {{ row.account.name }}
+                  </a>
+                  <div class="cc-widget-meta cc-widget-meta--invoice">
+                    <span class="cc-widget-invoice">{{ row.invoiceLabel }}</span>
+                  </div>
+                  <div class="cc-widget-meta">
+                    <span class="cc-widget-muted">Disponível</span>
+                    <strong class="cc-widget-amt cc-widget-amt--pos">
+                      R$ {{ row.summary.available | number: '1.2-2':'pt-BR' }}
+                    </strong>
+                  </div>
+                </div>
+              </article>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <mat-card class="widget widget--donut" appearance="outlined">
         <mat-card-header>
           <mat-card-title>Despesas por categoria</mat-card-title>
           <mat-card-subtitle>
@@ -385,7 +388,8 @@
           }
         </mat-card-content>
       </mat-card>
-    </div>
+        </div>
+      </div>
 
     <mat-menu #apPayMenu="matMenu">
       <ng-template matMenuContent let-row="row">

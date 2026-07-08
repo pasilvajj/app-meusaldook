@@ -57,12 +57,19 @@
 .bento {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
 }
 
+.bento-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
 .widget {
-  grid-column: span 6;
+  width: 100%;
   border-radius: 14px !important;
   overflow: hidden;
   background: var(--dash-card);
@@ -80,14 +87,6 @@
   mat-card-content {
     flex-grow: 0;
   }
-}
-
-.widget--wide {
-  grid-column: span 12;
-}
-
-.widget--creditcards {
-  grid-column: span 12;
 }
 
 .widget--creditcards mat-card-title {
@@ -183,13 +182,14 @@
 }
 
 .widget--chart {
-  grid-column: span 6;
-  min-height: 320px;
+  min-height: 0;
+  align-self: start;
 }
 
-/** Cartão «Fluxo de caixa»: mais compacto que os outros gráficos. */
+/** Cartão «Fluxo de caixa»: altura conforme conteúdo. */
 .widget.widget--chart.widget--flux {
   min-height: 0;
+  align-self: start;
 }
 
 .widget--flux .flux-card-body {
@@ -202,8 +202,8 @@
 }
 
 .widget--donut {
-  grid-column: span 6;
-  min-height: 300px;
+  min-height: 0;
+  align-self: start;
 }
 
 /** Cartão «Contas a pagar» (despesas futuras / vazio alinhado ao mock) */
@@ -833,16 +833,16 @@
 
 .widget.widget--chart.widget--metas-card {
   min-height: 0;
+  align-self: start;
+
   .metas-grid {
     min-width: 0;
   }
 }
 
 @media (max-width: 1024px) {
-  .widget,
-  .widget--chart,
-  .widget--donut {
-    grid-column: span 12;
+  .bento {
+    grid-template-columns: 1fr;
   }
 }
 
