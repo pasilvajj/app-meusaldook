@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/services/auth.service';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
 
 @Component({
   selector: 'app-login',
@@ -44,7 +45,10 @@ export class LoginComponent {
     }
     this.auth.login(this.form.getRawValue()).subscribe({
       next: () => void this.router.navigateByUrl('/dashboard'),
-      error: () => this.error.set('Credenciais inválidas ou erro de rede.'),
+      error: (err) =>
+        this.error.set(
+          apiErrorMessage(err, 'Não foi possível entrar. Verifique email e senha.'),
+        ),
     });
   }
 }

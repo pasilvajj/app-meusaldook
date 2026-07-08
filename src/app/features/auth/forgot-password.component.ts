@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../core/services/auth.service';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
 
 @Component({
   selector: 'app-forgot-password',
@@ -47,8 +48,8 @@ export class ForgotPasswordComponent {
         this.success.set(res.message);
         this.submitting.set(false);
       },
-      error: () => {
-        this.error.set('Não foi possível processar o pedido. Tente novamente.');
+      error: (err) => {
+        this.error.set(apiErrorMessage(err, 'Não foi possível processar o pedido. Tente novamente.'));
         this.submitting.set(false);
       },
     });

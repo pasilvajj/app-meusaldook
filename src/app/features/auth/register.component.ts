@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../core/services/auth.service';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
 
 @Component({
   selector: 'app-register',
@@ -43,11 +44,7 @@ export class RegisterComponent {
     this.auth.register(this.form.getRawValue()).subscribe({
       next: () => void this.router.navigateByUrl('/dashboard'),
       error: (err) => {
-        if (err.status === 409) {
-          this.error.set('Este email já está cadastrado.');
-        } else {
-          this.error.set('Não foi possível concluir o cadastro.');
-        }
+        this.error.set(apiErrorMessage(err, 'Não foi possível concluir o cadastro.'));
       },
     });
   }

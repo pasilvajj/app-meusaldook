@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../core/services/auth.service';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
 
 @Component({
   selector: 'app-reset-password',
@@ -70,10 +71,9 @@ export class ResetPasswordComponent implements OnInit {
         this.submitting.set(false);
       },
       error: (err) => {
-        const msg =
-          err?.error?.message ??
-          'Não foi possível redefinir a senha. O link pode ter expirado.';
-        this.error.set(msg);
+        this.error.set(
+          apiErrorMessage(err, 'Não foi possível redefinir a senha. O link pode ter expirado.'),
+        );
         this.submitting.set(false);
       },
     });
