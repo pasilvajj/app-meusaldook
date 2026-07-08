@@ -11,6 +11,8 @@ export interface TransactionRequest {
   installmentGroupId?: string | null;
   showInPayables?: boolean;
   markAsPaid?: boolean;
+  /** Propaga categoria e descrição base às demais parcelas do grupo. */
+  applyToInstallmentGroup?: boolean;
 }
 
 export interface TransactionResponse {

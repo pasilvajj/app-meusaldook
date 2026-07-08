@@ -12,6 +12,16 @@ export function parseInstallmentFromDescription(description: string | null | und
   return { parcelNumber: Number(match[1]), totalParcels: Number(match[2]) };
 }
 
+export function appendParcelLabelToDescription(
+  baseDescription: string | null,
+  parcelNumber: number,
+  totalParcels: number,
+): string | null {
+  const label = `[Parcela ${parcelNumber}/${totalParcels}]`;
+  if (!baseDescription?.trim()) return label;
+  return `${baseDescription.trim()}\n\n${label}`;
+}
+
 function stripBracketTags(text: string): string {
   return text
     .replace(/\[[^\]]*]/g, ' ')

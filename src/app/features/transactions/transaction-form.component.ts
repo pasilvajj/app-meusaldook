@@ -42,6 +42,11 @@ import type {
   RepetitionCustomizeDialogResult,
 } from './repetition-customize-dialog.data';
 import { buildInstallmentTransactions } from './installment-planner';
+import {
+  appendParcelLabelToDescription,
+  parseInstallmentFromDescription,
+  type InstallmentInfo,
+} from './installment-utils';
 import type { TransactionRequest } from '../../core/models/transaction.models';
 
 @Component({
@@ -159,6 +164,8 @@ export class TransactionFormComponent implements OnInit {
 
   private editingId: number | null = null;
   private editingRecurringId: number | null = null;
+  private editingInstallmentGroupId: string | null = null;
+  private editingInstallmentMeta: InstallmentInfo | null = null;
 
   ngOnInit(): void {
     this.expenseLayout = this.inDialog && this.dialogData?.useExpenseLayout === true;
@@ -258,6 +265,8 @@ export class TransactionFormComponent implements OnInit {
             showInPayables: !!t.showInPayables,
           });
           this.expensePaymentConfirmed.set(!!t.paidAt);
+          this.editingInstallmentGroupId = t.installmentGroupId?.trim() || null;
+          this.editingInstallmentMeta = parseInstallmentFromDescription(t.description);
           this.splitDescriptionToSummaryNotes(t.description);
           this.applyFixaMetaFromDescription(t.description);
           const cents = Math.round(t.amount * 100);
@@ -877,6 +886,10 @@ export class TransactionFormComponent implements OnInit {
       markAsPaid: markAsPaid || undefined,
     };
 
+    if (this.editingId != null && (this.editingInstallmentGroupId || this.editingInstallmentMeta)) {
+      body.applyToInstallmentGroup = true;
+    }
+
     let req$: Observable<void>;
     if (this.editingRecurringId != null) {
       req$ = this.recurringTransactions
@@ -1028,7 +1041,13 @@ export class TransactionFormComponent implements OnInit {
       if (summary) parts.push(summary);
       if (notes) parts.push(notes);
       let out = parts.length ? parts.join('\n\n') : null;
-      if (v.repetition === 'PARCELADO') {
+      if (this.editingInstallmentMeta) {
+        out = appendParcelLabelToDescription(
+          out,
+          this.editingInstallmentMeta.parcelNumber,
+          this.editingInstallmentMeta.totalParcels,
+        );
+      } else if (v.repetition === 'PARCELADO') {
         const p = v.installmentPeriodicity ?? 'MENSAL';
         const n = v.installmentCount ?? 0;
         const em = v.parcelEveryMonths ?? 1;
