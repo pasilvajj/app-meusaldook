@@ -16,6 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TransactionApiService } from '../../core/services/transaction-api.service';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
 import {
   RecurringTransactionApiService,
   type RecurringTransactionResponse,
@@ -476,7 +477,8 @@ export class TransactionFormComponent implements OnInit {
           this.dialogRef.close(true);
         }
       },
-      error: () => this.error.set('Erro ao marcar como paga.'),
+      error: (err) =>
+        this.error.set(apiErrorMessage(err, 'Erro ao marcar como paga.')),
     });
   }
 
@@ -924,7 +926,8 @@ export class TransactionFormComponent implements OnInit {
           void this.router.navigateByUrl('/transactions');
         }
       },
-      error: () => this.error.set('Erro ao salvar.'),
+      error: (err) =>
+        this.error.set(apiErrorMessage(err, 'Erro ao salvar a transação.')),
     });
   }
 
