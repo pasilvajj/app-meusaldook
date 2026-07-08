@@ -50,7 +50,9 @@
                 (blur)="onAmountBlur()"
               />
             </mat-form-field>
-            <mat-checkbox formControlName="useParcelAmountMode">Valor da parcela</mat-checkbox>
+            <mat-checkbox formControlName="useParcelAmountMode" (change)="onParcelAmountModeChange($event)">
+              Valor da parcela
+            </mat-checkbox>
           </div>
           @if (installmentSummary()) {
             <div class="rep-summary">

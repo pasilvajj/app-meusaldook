@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import {
   centsFromAmountInputEvent,
   formatBrlAmountInput,
@@ -41,6 +41,8 @@ export class RepetitionCustomizeDialogComponent {
   /** Valor mascarado (total ou por parcela, conforme o checkbox «Valor da parcela»). */
   readonly amountCents = signal(0);
   readonly amountText = signal(formatBrlAmountInput(0));
+  /** Total de referência (modo «Valor total») para converter ao marcar «Valor da parcela». */
+  private readonly referenceTotalCents = signal(0);
 
   constructor(
     private readonly fb: FormBuilder,
@@ -59,32 +61,49 @@ export class RepetitionCustomizeDialogComponent {
     });
 
     const totalCents = Math.round(Math.max(0, data.totalAmount ?? 0) * 100);
+    this.referenceTotalCents.set(totalCents);
     let initialCents = totalCents;
     if (data.useParcelAmountMode) {
       initialCents =
         data.parcelAmount > 0
           ? Math.round(data.parcelAmount * 100)
-          : Math.round(totalCents / Math.max(1, data.installmentCount));
+          : totalCents;
     }
     this.setAmountCents(initialCents);
 
-    this.form.controls['repetition'].valueChanges.subscribe(() => this.syncRepValidators());
+    this.form.controls['repetition'].valueChanges.subscribe((rep) => {
+      this.syncRepValidators();
+      if (rep === 'PARCELADO' && this.amountCents() === 0 && this.referenceTotalCents() > 0) {
+        this.setAmountCents(this.referenceTotalCents());
+      }
+    });
     this.form.controls['defineTotalOccurrences'].valueChanges.subscribe(() => this.syncRepValidators());
-    this.form.controls['useParcelAmountMode'].valueChanges.subscribe((useParcel: boolean) =>
-      this.convertAmountOnModeChange(useParcel),
-    );
     this.syncRepValidators();
   }
 
-  /** Ao alternar total ↔ parcela, converte o valor exibido mantendo o mesmo montante. */
+  onParcelAmountModeChange(ev: MatCheckboxChange): void {
+    this.convertAmountOnModeChange(ev.checked);
+  }
+
+  /** Ao alternar total ↔ parcela: mantém o número ao marcar; ao desmarcar, exibe o total (parcela × n). */
   private convertAmountOnModeChange(useParcel: boolean): void {
     const count = this.installmentCountValue();
-    if (count < 1 || this.amountCents() === 0) return;
+    if (count < 1) return;
+
     if (useParcel) {
-      this.setAmountCents(Math.round(this.amountCents() / count));
-    } else {
-      this.setAmountCents(this.amountCents() * count);
+      const parcelCents =
+        this.amountCents() > 0 ? this.amountCents() : this.referenceTotalCents();
+      if (parcelCents <= 0) return;
+      this.setAmountCents(parcelCents);
+      this.referenceTotalCents.set(parcelCents * count);
+      return;
     }
+
+    const parcelCents = this.amountCents();
+    if (parcelCents <= 0) return;
+    const totalCents = parcelCents * count;
+    this.referenceTotalCents.set(totalCents);
+    this.setAmountCents(totalCents);
   }
 
   private setAmountCents(cents: number): void {
@@ -95,6 +114,9 @@ export class RepetitionCustomizeDialogComponent {
   onAmountInput(ev: Event): void {
     const cents = centsFromAmountInputEvent(ev, this.amountCents());
     this.setAmountCents(cents);
+    if (!this.isParcelValueMode()) {
+      this.referenceTotalCents.set(cents);
+    }
   }
 
   onAmountBlur(): void {
@@ -129,8 +151,9 @@ export class RepetitionCustomizeDialogComponent {
     const count = this.installmentCountValue();
     if (count < 1 || this.amountCents() === 0) return '';
     if (this.isParcelValueMode()) {
+      const parcel = formatBrlAmountInput(this.amountCents() / 100);
       const total = formatBrlAmountInput(this.totalValueCents() / 100);
-      return `${count} parcela${count > 1 ? 's' : ''} · Total R$ ${total}`;
+      return `${count} × R$ ${parcel} · Total R$ ${total}`;
     }
     const parcel = formatBrlAmountInput(this.parcelValueCents() / 100);
     return `${count} parcela${count > 1 ? 's' : ''} de R$ ${parcel}`;
@@ -179,8 +202,15 @@ export class RepetitionCustomizeDialogComponent {
     }
     const v = this.form.getRawValue() as RepetitionCustomizeDialogResult;
     if (v.repetition === 'PARCELADO') {
-      v.parcelAmount = this.isParcelValueMode() ? this.amountCents() / 100 : 0;
-      v.totalAmount = this.totalValueCents() / 100;
+      const count = this.installmentCountValue();
+      if (this.isParcelValueMode()) {
+        v.parcelAmount = this.amountCents() / 100;
+        v.totalAmount = Math.round(((this.amountCents() * Math.max(1, count)) / 100) * 100) / 100;
+      } else {
+        v.parcelAmount = 0;
+        v.totalAmount = this.amountCents() / 100;
+        this.referenceTotalCents.set(this.amountCents());
+      }
     } else {
       v.totalAmount = this.data.totalAmount;
     }

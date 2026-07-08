@@ -751,7 +751,9 @@ export class TransactionFormComponent implements OnInit {
   }
 
   openRepetitionCustomize(): void {
+    this.syncAmountNumericFromUi();
     const v = this.form.getRawValue();
+    const totalForDialog = this.resolveExpenseTotalForDialog();
     const parcelForDialog =
       v.useParcelAmountMode && v.parcelAmount > 0
         ? v.parcelAmount
@@ -767,7 +769,7 @@ export class TransactionFormComponent implements OnInit {
       parcelAmount: parcelForDialog,
       useParcelAmountMode: v.useParcelAmountMode,
       defineTotalOccurrences: v.defineTotalOccurrences,
-      totalAmount: this.computeExpenseAmountNumber(),
+      totalAmount: totalForDialog,
     };
     this.overlayDialog
       .open(RepetitionCustomizeDialogComponent, {
@@ -798,6 +800,19 @@ export class TransactionFormComponent implements OnInit {
         }
         this.syncAmountNumericFromUi();
       });
+  }
+
+  /** Total atual do lançamento para pré-preencher o modal «Personalizar». */
+  private resolveExpenseTotalForDialog(): number {
+    const v = this.form.getRawValue();
+    if (v.repetition === 'PARCELADO' && v.useParcelAmountMode && v.installmentCount > 0) {
+      const parcel = v.parcelAmount > 0 ? v.parcelAmount : this.expenseAmountCents() / 100;
+      return Math.round(parcel * v.installmentCount * 100) / 100;
+    }
+    const fromCents = this.expenseAmountCents() / 100;
+    const fromForm = Number(v.amount) || 0;
+    const fromText = parsePtBrAmountInput(this.expenseAmountText());
+    return Math.max(fromCents, fromForm, fromText);
   }
 
   submit(): void {
