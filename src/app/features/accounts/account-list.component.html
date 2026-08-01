@@ -104,6 +104,12 @@
         <mat-icon>{{ acc.active ? 'visibility_off' : 'visibility' }}</mat-icon>
         <span>{{ acc.active ? 'Marcar como inativa' : 'Marcar como ativa' }}</span>
       </button>
+      @if (canDeleteAccount(acc)) {
+        <button mat-menu-item type="button" class="contas-menu-delete" (click)="deleteAccount(acc)">
+          <mat-icon color="warn">delete_outline</mat-icon>
+          <span>Excluir conta</span>
+        </button>
+      }
     </ng-template>
   </mat-menu>
 

@@ -24,4 +24,8 @@ export class AccountApiService {
   update(id: number, body: AccountWriteRequestDto): Observable<AccountApiResponse> {
     return this.http.patch<AccountApiResponse>(`${this.baseUrl}/api/v1/accounts/${id}`, body);
   }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/api/v1/accounts/${id}`);
+  }
 }

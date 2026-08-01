@@ -8,6 +8,7 @@ import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/sl
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DecimalPipe } from '@angular/common';
 import { AccountApiService } from '../../core/services/account-api.service';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
 import { groupsFromAccounts, uiAccountFromApi, writeDtoFromUi } from './account-api.mapper';
 import { AccountFormDialogService } from './account-form-dialog.service';
 import {
@@ -124,6 +125,31 @@ export class AccountListComponent implements OnInit {
     this.accountApi.update(account.serverId, dto).subscribe({
       next: () => this.loadAccounts(),
       error: () => this.snack.open('Não foi possível alterar o estado da conta.', 'Fechar', { duration: 5000 }),
+    });
+  }
+
+  canDeleteAccount(account: UiAccount): boolean {
+    return account.publicKey !== 'principal';
+  }
+
+  deleteAccount(account: UiAccount): void {
+    if (!this.canDeleteAccount(account)) {
+      this.snack.open('A conta principal não pode ser excluída.', 'Fechar', { duration: 5000 });
+      return;
+    }
+    const msg =
+      `Excluir permanentemente a conta "${account.name}"?\n\n` +
+      'Esta ação não pode ser desfeita. Só é possível se a conta não tiver lançamentos ou despesas fixas.';
+    if (!confirm(msg)) return;
+    this.accountApi.delete(account.serverId).subscribe({
+      next: () => {
+        this.snack.open('Conta excluída.', 'Fechar', { duration: 4000 });
+        this.loadAccounts();
+      },
+      error: (err) =>
+        this.snack.open(apiErrorMessage(err, 'Não foi possível excluir a conta.'), 'Fechar', {
+          duration: 7000,
+        }),
     });
   }
 
