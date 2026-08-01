@@ -121,6 +121,14 @@
   font-weight: 700;
 }
 
+.tx-account-row--prepaid .tx-account-name {
+  color: #9a3412;
+}
+
+.tx-account-row--prepaid strong {
+  color: #ea580c;
+}
+
 .tx-account-name {
   min-width: 0;
   overflow: hidden;

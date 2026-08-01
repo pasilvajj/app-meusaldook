@@ -18,15 +18,15 @@
           <span>Confirmado</span>
           <span>Projetado</span>
         </div>
-        @for (acc of accountRows().rows; track acc.name) {
-          <div class="tx-account-row">
+        @for (acc of accountRows().rows; track acc.publicKey) {
+          <div class="tx-account-row" [class.tx-account-row--prepaid]="acc.prepaid">
             <span class="tx-account-name">{{ acc.name }}</span>
             <strong [class.tx-num-neg]="acc.confirmed < 0">R$ {{ acc.confirmed | number: '1.2-2':'pt-BR' }}</strong>
             <strong [class.tx-num-neg]="acc.projected < 0">R$ {{ acc.projected | number: '1.2-2':'pt-BR' }}</strong>
           </div>
         }
         <div class="tx-account-row tx-account-row--total">
-          <span class="tx-account-name">Total</span>
+          <span class="tx-account-name">{{ hasPrepaidInSidebar() ? 'Total caixa' : 'Total' }}</span>
           <strong [class.tx-num-neg]="accountRows().totalConfirmed < 0">R$ {{ accountRows().totalConfirmed | number: '1.2-2':'pt-BR' }}</strong>
           <strong [class.tx-num-neg]="accountRows().totalProjected < 0">R$ {{ accountRows().totalProjected | number: '1.2-2':'pt-BR' }}</strong>
         </div>

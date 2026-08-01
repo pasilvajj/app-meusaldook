@@ -33,6 +33,14 @@ import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
 import { isPrepaidAccount } from '../accounts/account.models';
 
+interface AccountSidebarRow {
+  name: string;
+  publicKey: string;
+  confirmed: number;
+  projected: number;
+  prepaid: boolean;
+}
+
 type TxUiStatus = 'PENDENTE' | 'AGENDADO' | 'CONFIRMADO' | 'CONCILIADO';
 
 type LedgerKind = 'prior-balance' | 'opening-balance' | 'tx';
@@ -193,8 +201,17 @@ export class TransactionListComponent implements OnInit {
 
   readonly displayRows = computed(() => this.buildLedgerRows());
 
+  /** Lançamentos que entram no extrato da conta corrente (exclui pré-paga). */
+  readonly ledgerTransactions = computed(() =>
+    this.rows().filter((tx) => this.txAffectsLedgerBalance(tx)),
+  );
+
+  readonly hasPrepaidInSidebar = computed(() =>
+    this.accountRows().rows.some((r) => r.prepaid),
+  );
+
   readonly accountRows = computed(() => {
-    const agg = new Map<string, number>();
+    const agg = new Map<string, { name: string; total: number; prepaid: boolean }>();
     const acc = this.principalAccount();
     const f = this.focusDate();
     const y = f.getFullYear();
@@ -203,9 +220,13 @@ export class TransactionListComponent implements OnInit {
     const openingSigned = acc ? openingBalanceInViewMonth(acc, y, mo) : 0;
     const openingInMonth = !!(acc && ibd && isYyyyMmDayInMonth(ibd, y, mo) && openingSigned !== 0);
 
+    const upsert = (publicKey: string, name: string, delta: number, prepaid: boolean) => {
+      const cur = agg.get(publicKey) ?? { name, total: 0, prepaid };
+      agg.set(publicKey, { name: cur.name || name, total: cur.total + delta, prepaid: cur.prepaid || prepaid });
+    };
+
     if (acc && openingSigned !== 0 && openingInMonth) {
-      const key = acc.name || 'Conta principal';
-      agg.set(key, (agg.get(key) ?? 0) + openingSigned);
+      upsert(acc.publicKey, acc.name || 'Conta principal', openingSigned, false);
     }
     if (acc && !openingInMonth) {
       const carry = computeBalanceAtEndOfPreviousMonth(
@@ -215,24 +236,49 @@ export class TransactionListComponent implements OnInit {
         (tx) => this.txAffectsLedgerBalance(tx),
       );
       if (Math.abs(carry) > 1e-9) {
-        const key = acc.name || 'Conta principal';
-        agg.set(key, (agg.get(key) ?? 0) + carry);
+        upsert(acc.publicKey, acc.name || 'Conta principal', carry, false);
       }
     }
     for (const tx of this.rows()) {
-      const key = tx.accountName || 'Conta principal';
-      agg.set(key, (agg.get(key) ?? 0) + this.signedAmount(tx));
+      const pk = tx.accountPublicKey?.trim() || 'principal';
+      const prepaid = !this.txAffectsLedgerBalance(tx);
+      upsert(pk, tx.accountName || 'Conta principal', this.signedAmount(tx), prepaid);
     }
-    const rows = [...agg.entries()]
-      .map(([name, total]) => ({ name, confirmed: total, projected: total }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt'));
-    const totalConfirmed = rows.reduce((s, r) => s + r.confirmed, 0);
-    const totalProjected = rows.reduce((s, r) => s + r.projected, 0);
+
+    for (const uiAcc of this.accountsByKey().values()) {
+      if (!isPrepaidAccount(uiAcc.accountType)) continue;
+      const monthNet = agg.get(uiAcc.publicKey)?.total;
+      const display =
+        uiAcc.currentBalance != null && Number.isFinite(uiAcc.currentBalance)
+          ? uiAcc.currentBalance
+          : (monthNet ?? 0);
+      agg.set(uiAcc.publicKey, {
+        name: uiAcc.name,
+        total: display,
+        prepaid: true,
+      });
+    }
+
+    const rows: AccountSidebarRow[] = [...agg.entries()]
+      .map(([publicKey, v]) => ({
+        publicKey,
+        name: v.name,
+        confirmed: v.total,
+        projected: v.total,
+        prepaid: v.prepaid,
+      }))
+      .sort((a, b) => {
+        if (a.prepaid !== b.prepaid) return a.prepaid ? 1 : -1;
+        return a.name.localeCompare(b.name, 'pt');
+      });
+
+    const totalConfirmed = rows.filter((r) => !r.prepaid).reduce((s, r) => s + r.confirmed, 0);
+    const totalProjected = rows.filter((r) => !r.prepaid).reduce((s, r) => s + r.projected, 0);
     return { rows, totalConfirmed, totalProjected };
   });
 
   readonly incomeTotal = computed(() => {
-    const txIncome = this.rows()
+    const txIncome = this.ledgerTransactions()
       .filter((r) => r.kind === 'INCOME')
       .reduce((s, r) => s + r.amount, 0);
     const acc = this.principalAccount();
@@ -241,7 +287,7 @@ export class TransactionListComponent implements OnInit {
   });
 
   readonly expenseTotal = computed(() => {
-    const txExpense = this.rows()
+    const txExpense = this.ledgerTransactions()
       .filter((r) => r.kind === 'EXPENSE')
       .reduce((s, r) => s + r.amount, 0);
     const acc = this.principalAccount();
@@ -388,8 +434,9 @@ export class TransactionListComponent implements OnInit {
     const y = this.focusDate().getFullYear();
     const mo = this.focusDate().getMonth() + 1;
     const opening = acc ? openingBalanceInViewMonth(acc, y, mo) : 0;
-    const txIncome = monthTxs.filter((r) => r.kind === 'INCOME').reduce((s, r) => s + r.amount, 0);
-    const txExpense = monthTxs.filter((r) => r.kind === 'EXPENSE').reduce((s, r) => s + r.amount, 0);
+    const ledgerTxs = monthTxs.filter((tx) => this.txAffectsLedgerBalance(tx));
+    const txIncome = ledgerTxs.filter((r) => r.kind === 'INCOME').reduce((s, r) => s + r.amount, 0);
+    const txExpense = ledgerTxs.filter((r) => r.kind === 'EXPENSE').reduce((s, r) => s + r.amount, 0);
     const income = txIncome + Math.max(0, opening);
     const expense = txExpense + Math.max(0, -opening);
     return { income, expense, result: income - expense };

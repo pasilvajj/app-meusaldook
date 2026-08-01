@@ -94,8 +94,8 @@ export class CategoryExpenseDetailDialogComponent implements OnInit {
               to: to.toISOString(),
               categoryId: category.id,
               kind: 'EXPENSE',
-              accountPublicKey: 'principal',
               includeProjected: true,
+              excludeCreditCards: true,
             }),
             ...cardLoads,
           ];
