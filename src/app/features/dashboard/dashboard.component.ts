@@ -54,9 +54,14 @@ import {
 } from '../transactions/fixed-expense-utils';
 import { RecurringTransactionApiService } from '../../core/services/recurring-transaction-api.service';
 import { DashboardPayablesFabService } from '../../core/services/dashboard-payables-fab.service';
+import {
+  buildCashBalanceRows,
+  monthRangeIso,
+} from '../../core/utils/dashboard-balance.util';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
 import {
+  aggregateExpenseByCategoryFromTransactions,
   CreditCardInvoiceSummary,
   InvoiceCycle,
   computeCreditCardInvoiceSummary,
@@ -82,6 +87,7 @@ interface BalanceRow {
   accountKey: string;
   confirmed: number;
   projected: number;
+  accountType?: UiAccount['accountType'];
 }
 
 /** Resumo sob o gráfico de fluxo (mock). */
@@ -226,12 +232,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
             switchMap((dashboard) => {
               const accounts = (dashboard.accounts ?? []).map(uiAccountFromApi);
               const cards = accounts.filter((a) => a.active && a.accountType === 'CREDIT_CARD');
-              if (!cards.length) {
-                return of({ dashboard, creditCardRows: [] as CreditCardDashboardRow[] });
-              }
-              return this.loadCreditCardRows(cards, year, month).pipe(
-                map((creditCardRows) => ({ dashboard, creditCardRows })),
-              );
+              const year = new Date().getFullYear();
+              const month = new Date().getMonth() + 1;
+              const principalKey = dashboard.account?.publicKey ?? 'principal';
+              const { from, to } = monthRangeIso(year, month);
+
+              const allMonthTxs$ = this.txApi
+                .list({
+                  page: 0,
+                  size: 5000,
+                  from,
+                  to,
+                  includeProjected: true,
+                  excludeCreditCards: true,
+                })
+                .pipe(map((page) => page.content));
+
+              const creditCardRows$ = cards.length
+                ? this.loadCreditCardRows(cards, year, month)
+                : of([] as CreditCardDashboardRow[]);
+
+              return forkJoin({
+                dashboard: of(dashboard),
+                allMonthTxs: allMonthTxs$,
+                creditCardRows: creditCardRows$,
+              });
             }),
           );
         }),
@@ -244,20 +269,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const summary = payload.summary;
           const goals = payload.goals;
           const uiAcc = payload.account ? uiAccountFromApi(payload.account) : null;
+          const allAccounts = (payload.accounts ?? []).map(uiAccountFromApi);
+          const principalKey = uiAcc?.publicKey ?? 'principal';
 
           this.data.set(summary);
           this.principalAccount.set(uiAcc);
 
           const goalResidue = computeGoalResidue(goals, summary.byCategory);
+          const year = new Date().getFullYear();
+          const month = new Date().getMonth() + 1;
           const { labels, values, accountEnd } = buildCashflowSeries(
-            new Date().getFullYear(),
-            new Date().getMonth() + 1,
+            year,
+            month,
             payload.monthTransactions,
             uiAcc,
             goalResidue,
           );
-          const year = new Date().getFullYear();
-          const month = new Date().getMonth() + 1;
           const lastDay = new Date(year, month, 0).getDate();
           const saldoEmLabel = formatSaldoEmLabel(year, month, lastDay);
 
@@ -269,14 +296,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
             total: accountEnd + goalResidue,
           });
 
-          this.balanceRows.set([
-            {
-              name: uiAcc?.name ?? 'Conta principal',
-              accountKey: uiAcc?.publicKey ?? 'principal',
-              confirmed: accountEnd,
-              projected: accountEnd + goalResidue,
-            },
-          ]);
+          this.balanceRows.set(
+            buildCashBalanceRows(
+              allAccounts,
+              result.allMonthTxs,
+              principalKey,
+              goalResidue,
+              year,
+              month,
+            ),
+          );
 
           const mRows = buildMetasDespesaRows(goals, summary.byCategory);
           this.metasDespesaRows.set(mRows);
@@ -301,7 +330,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             })),
           );
           const donutCategories = mergeExpenseCategoriesForDonut(
-            summary.byCategory,
+            aggregateExpenseByCategoryFromTransactions(result.allMonthTxs, year, month),
             result.creditCardRows.flatMap((r) => r.transactions),
           );
           this.expenseCategoriesForDonut.set(donutCategories);

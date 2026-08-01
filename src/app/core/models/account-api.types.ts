@@ -1,5 +1,7 @@
 /** Valores alinhados ao enum Java `AccountType`. */
-export type AccountTypeDto = 'CHECKING' | 'CREDIT_CARD' | 'CASH' | 'OTHER_ASSET';
+export type AccountTypeDto = 'CHECKING' | 'PREPAID' | 'CREDIT_CARD' | 'CASH' | 'OTHER_ASSET';
+
+export type PrepaidKindDto = 'MEAL_VOUCHER' | 'FOOD_VOUCHER';
 
 export interface AccountApiResponse {
   id: number;
@@ -16,8 +18,10 @@ export interface AccountApiResponse {
   creditCardDueDay?: number | null;
   creditCardNextInvoiceDate?: string | null;
   creditCardClosingDaysBeforeDue?: number | null;
+  prepaidKind?: PrepaidKindDto | null;
   notes: string | null;
   signedInitialBalance: number;
+  currentBalance?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,5 +39,6 @@ export interface AccountWriteRequestDto {
   creditCardDueDay?: number | null;
   creditCardNextInvoiceDate?: string | null;
   creditCardClosingDaysBeforeDue?: number | null;
+  prepaidKind?: PrepaidKindDto | null;
   notes?: string | null;
 }

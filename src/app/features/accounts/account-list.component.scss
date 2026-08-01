@@ -5,6 +5,8 @@
   --contas-card: #ffffff;
   --contas-teal: #0d9488;
   --contas-teal-soft: #ecfdf5;
+  --contas-prepaid: #ea580c;
+  --contas-prepaid-soft: #fff7ed;
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
   display: block;
@@ -108,6 +110,47 @@
   align-items: center;
   gap: 0.65rem;
   min-width: 0;
+}
+
+.contas-row--prepaid {
+  background: linear-gradient(90deg, rgba(255, 247, 237, 0.65), transparent 55%);
+}
+
+.contas-row-icon--prepaid {
+  color: var(--contas-prepaid);
+}
+
+.contas-row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.contas-row-sub {
+  font-size: 0.78rem;
+  color: var(--contas-prepaid);
+  font-weight: 600;
+}
+
+.contas-balance {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #047857;
+  font-variant-numeric: tabular-nums;
+}
+
+.contas-balance--low {
+  color: #d97706;
+}
+
+.contas-balance--empty {
+  color: #dc2626;
+}
+
+.contas-badge--prepaid {
+  background: var(--contas-prepaid-soft);
+  color: #c2410c;
 }
 
 .contas-row-icon {

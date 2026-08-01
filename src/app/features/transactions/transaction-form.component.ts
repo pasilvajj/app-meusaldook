@@ -1,9 +1,10 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin, merge, of, startWith, map, switchMap, type Observable } from 'rxjs';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -33,7 +34,11 @@ import {
 import { MoneyKind } from '../../core/models/money-kind';
 import { CategoryResponse } from '../../core/models/category.models';
 import type { AccountApiResponse } from '../../core/models/account-api.types';
-import { accountTypeLabel } from '../accounts/account.models';
+import { accountTypeLabel, isPrepaidAccount, prepaidKindLabel } from '../accounts/account.models';
+import {
+  filterCategoriesForPrepaid,
+  prepaidCategoryFilterHint,
+} from '../accounts/prepaid-category.util';
 import { TransactionFormDialogData } from './transaction-form-dialog.data';
 import { RepetitionCustomizeDialogComponent } from './repetition-customize-dialog.component';
 import type {
@@ -67,6 +72,7 @@ import type { TransactionRequest } from '../../core/models/transaction.models';
     MatDatepickerModule,
     MatCheckboxModule,
     RouterLink,
+    DecimalPipe,
   ],
   templateUrl: './transaction-form.component.html',
   styleUrl: './transaction-form.component.scss',
@@ -95,7 +101,13 @@ export class TransactionFormComponent implements OnInit {
   private readonly allAccounts = signal<AccountApiResponse[]>([]);
   /** Contas para o select “Conta” no layout despesa (chave = `publicKey`). */
   readonly expenseAccountOptions = signal<
-    { publicKey: string; name: string; typeLabel: string; accountType: AccountApiResponse['accountType'] }[]
+    {
+      publicKey: string;
+      name: string;
+      typeLabel: string;
+      accountType: AccountApiResponse['accountType'];
+      currentBalance?: number | null;
+    }[]
   >([]);
   private readonly accountsByKey = signal<Map<string, AccountApiResponse>>(new Map());
 
@@ -103,6 +115,36 @@ export class TransactionFormComponent implements OnInit {
     const key = publicKey ?? 'principal';
     return this.expenseAccountOptions().find((a) => a.publicKey === key)?.name ?? '';
   }
+
+  selectedPrepaidBalance(): number | null {
+    const key = this.form.controls.accountKey.value?.trim();
+    if (!key) return null;
+    const acc = this.accountsByKey().get(key);
+    if (acc?.accountType !== 'PREPAID') return null;
+    return acc.currentBalance != null ? Number(acc.currentBalance) : null;
+  }
+
+  prepaidBalanceAfterExpense(): number | null {
+    const balance = this.selectedPrepaidBalance();
+    if (balance == null) return null;
+    const amount = this.expenseLayout
+      ? this.computeExpenseAmountNumber()
+      : Number(this.form.controls.amount.value) || 0;
+    if (!Number.isFinite(amount)) return balance;
+    return balance - amount;
+  }
+
+  isPrepaidInsufficient(): boolean {
+    if (!this.isCreateExpense()) return false;
+    const after = this.prepaidBalanceAfterExpense();
+    return after != null && after < -0.001;
+  }
+
+  private formatBrl(value: number | null | undefined): string {
+    const n = value != null ? Number(value) : 0;
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly title = signal('Nova transação');
@@ -144,9 +186,31 @@ export class TransactionFormComponent implements OnInit {
 
   readonly notesChars = signal(0);
 
+  private readonly accountKeyTick = toSignal(
+    this.form.controls.accountKey.valueChanges.pipe(startWith(this.form.controls.accountKey.value)),
+    { initialValue: this.form.controls.accountKey.value },
+  );
+
   readonly filteredCategories = computed(() => {
     const kind = this.form.controls.kind.value;
-    return this.allCategories().filter((c) => c.kind === kind);
+    const cats = this.allCategories().filter((c) => c.kind === kind);
+    this.accountKeyTick();
+    const key = this.form.controls.accountKey.value?.trim() || 'principal';
+    const acc = this.accountsByKey().get(key);
+    if (acc?.accountType === 'PREPAID' && kind === 'EXPENSE' && acc.prepaidKind) {
+      return filterCategoriesForPrepaid(cats, acc.prepaidKind as 'MEAL_VOUCHER' | 'FOOD_VOUCHER', kind);
+    }
+    return cats;
+  });
+
+  readonly prepaidCategoryHint = computed(() => {
+    this.accountKeyTick();
+    const key = this.form.controls.accountKey.value?.trim() || 'principal';
+    const acc = this.accountsByKey().get(key);
+    if (acc?.accountType !== 'PREPAID' || !acc.prepaidKind || this.form.controls.kind.value !== 'EXPENSE') {
+      return null;
+    }
+    return prepaidCategoryFilterHint(acc.prepaidKind as 'MEAL_VOUCHER' | 'FOOD_VOUCHER');
   });
 
   readonly showPayablesOption = computed(() => {
@@ -202,8 +266,12 @@ export class TransactionFormComponent implements OnInit {
       selectable.map((a) => ({
         publicKey: a.publicKey,
         name: a.name,
-        typeLabel: accountTypeLabel(a.accountType),
+        typeLabel:
+          a.accountType === 'PREPAID'
+            ? `${prepaidKindLabel(a.prepaidKind ?? null)} · saldo ${this.formatBrl(a.currentBalance)}`
+            : accountTypeLabel(a.accountType),
         accountType: a.accountType,
+        currentBalance: a.currentBalance != null ? Number(a.currentBalance) : null,
       })),
     );
     const keys = selectable.map((a) => a.publicKey);
@@ -837,6 +905,12 @@ export class TransactionFormComponent implements OnInit {
     }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (this.isPrepaidInsufficient()) {
+      this.error.set(
+        `Saldo insuficiente na conta pré-paga. Disponível: ${this.formatBrl(this.selectedPrepaidBalance())}.`,
+      );
       return;
     }
     const v = this.form.getRawValue();

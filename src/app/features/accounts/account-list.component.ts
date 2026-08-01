@@ -6,15 +6,24 @@ import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { DecimalPipe } from '@angular/common';
 import { AccountApiService } from '../../core/services/account-api.service';
 import { groupsFromAccounts, uiAccountFromApi, writeDtoFromUi } from './account-api.mapper';
 import { AccountFormDialogService } from './account-form-dialog.service';
-import type { UiAccount, UiAccountGroup } from './account.models';
+import {
+  accountTypeIcon,
+  isPrepaidAccount,
+  prepaidBalanceTone,
+  prepaidKindLabel,
+  type UiAccount,
+  type UiAccountGroup,
+} from './account.models';
 
 @Component({
   selector: 'app-account-list',
   standalone: true,
   imports: [
+    DecimalPipe,
     MatFormFieldModule,
     MatInputModule,
     MatSlideToggleModule,
@@ -36,6 +45,11 @@ export class AccountListComponent implements OnInit {
   readonly filterText = signal('');
   readonly activeOnly = signal(true);
 
+  readonly accountTypeIcon = accountTypeIcon;
+  readonly isPrepaidAccount = isPrepaidAccount;
+  readonly prepaidKindLabel = prepaidKindLabel;
+  readonly prepaidBalanceTone = prepaidBalanceTone;
+
   readonly visibleGroups = computed(() => {
     const q = this.filterText().trim().toLowerCase();
     const onlyActive = this.activeOnly();
@@ -50,6 +64,14 @@ export class AccountListComponent implements OnInit {
       }))
       .filter((g) => g.accounts.length > 0);
   });
+
+  prepaidBalance(acc: UiAccount): number | null {
+    if (!isPrepaidAccount(acc.accountType)) return null;
+    if (acc.currentBalance != null && Number.isFinite(acc.currentBalance)) {
+      return acc.currentBalance;
+    }
+    return acc.initialBalance ?? 0;
+  }
 
   ngOnInit(): void {
     this.loadAccounts();

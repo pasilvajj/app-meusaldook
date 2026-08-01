@@ -24,7 +24,9 @@ import {
 import {
   ACCOUNT_TYPE_OPTIONS,
   CREDIT_CARD_CONSIDER_BALANCE_OPTIONS,
+  PREPAID_KIND_OPTIONS,
   AccountType,
+  PrepaidKind,
 } from './account.models';
 
 @Component({
@@ -51,14 +53,18 @@ export class AccountFormDialogComponent {
   private readonly snack = inject(MatSnackBar);
 
   readonly typeOptions = ACCOUNT_TYPE_OPTIONS;
+  readonly prepaidKindOptions = PREPAID_KIND_OPTIONS;
   readonly creditCardConsiderOptions = CREDIT_CARD_CONSIDER_BALANCE_OPTIONS;
   readonly showAdvanced = signal(false);
   readonly saving = signal(false);
   readonly limitAmountCents = signal(0);
   readonly limitAmountText = signal(formatBrlAmountInput(0));
+  readonly prepaidBalanceCents = signal(0);
+  readonly prepaidBalanceText = signal(formatBrlAmountInput(0));
 
   readonly form = this.fb.nonNullable.group({
     accountType: ['CHECKING' as AccountType, Validators.required],
+    prepaidKind: ['MEAL_VOUCHER' as PrepaidKind, Validators.required],
     currency: ['BRL' as const, Validators.required],
     name: ['', [Validators.required, Validators.maxLength(120)]],
     initialBalance: ['' as string | number, []],
@@ -74,6 +80,11 @@ export class AccountFormDialogComponent {
   });
 
   readonly isCreditCard = computed(() => this.formTick().accountType === 'CREDIT_CARD');
+  readonly isPrepaid = computed(() => this.formTick().accountType === 'PREPAID');
+  readonly selectedPrepaidHint = computed(() => {
+    const kind = this.formTick().prepaidKind as PrepaidKind;
+    return this.prepaidKindOptions.find((o) => o.id === kind)?.hint ?? '';
+  });
 
   readonly closingHint = computed(() => {
     this.formTick();
@@ -89,9 +100,15 @@ export class AccountFormDialogComponent {
       if (type === 'CREDIT_CARD') {
         this.syncCreditCardDates();
         this.setCreditCardValidators(true);
+        this.setPrepaidValidators(false);
         this.form.controls.considerBalanceMode.setValue('PENDING');
+      } else if (type === 'PREPAID') {
+        this.setCreditCardValidators(false);
+        this.setPrepaidValidators(true);
+        this.form.controls.considerBalanceMode.setValue('IMMEDIATE');
       } else {
         this.setCreditCardValidators(false);
+        this.setPrepaidValidators(false);
         this.form.controls.considerBalanceMode.setValue('IMMEDIATE');
       }
     });
@@ -116,6 +133,16 @@ export class AccountFormDialogComponent {
     this.limitAmountText.set(formatBrlAmountInput(this.limitAmountCents() / 100));
   }
 
+  onPrepaidBalanceInput(ev: Event): void {
+    const cents = centsFromAmountInputEvent(ev, this.prepaidBalanceCents());
+    this.prepaidBalanceCents.set(cents);
+    this.prepaidBalanceText.set(formatBrlAmountInput(cents / 100));
+  }
+
+  onPrepaidBalanceBlur(): void {
+    this.prepaidBalanceText.set(formatBrlAmountInput(this.prepaidBalanceCents() / 100));
+  }
+
   save(): void {
     if (this.form.invalid || this.saving()) {
       this.form.markAllAsTouched();
@@ -124,8 +151,13 @@ export class AccountFormDialogComponent {
     const v = this.form.getRawValue();
     const n = v.notes.trim();
     const isCard = v.accountType === 'CREDIT_CARD';
-    const bal = isCard ? this.limitAmountCents() / 100 : this.parseBalance(v.initialBalance);
-    const initialBalanceAmount = bal != null ? Math.abs(bal) : 0;
+    const isPrepaid = v.accountType === 'PREPAID';
+    const bal = isCard
+      ? this.limitAmountCents() / 100
+      : isPrepaid
+        ? this.prepaidBalanceCents() / 100
+        : this.parseBalance(v.initialBalance);
+    const initialBalanceAmount = bal != null ? Math.abs(bal) : isPrepaid ? 0 : 0;
     const saldoCreditorDebtor = bal != null && bal < 0 ? 'DEBTOR' : 'CREDITOR';
     const dto = writeDtoForCreate({
       accountType: v.accountType as AccountType,
@@ -135,6 +167,7 @@ export class AccountFormDialogComponent {
       initialBalanceAmount,
       saldoCreditorDebtor: isCard ? 'CREDITOR' : saldoCreditorDebtor,
       considerBalanceMode: isCard ? v.considerBalanceMode : 'IMMEDIATE',
+      prepaidKind: isPrepaid ? (v.prepaidKind as PrepaidKind) : null,
       ...(isCard
         ? {
             creditCardDueDay: Number(v.creditCardDueDay),
@@ -183,6 +216,16 @@ export class AccountFormDialogComponent {
     next.updateValueAndValidity({ emitEvent: false });
     closing.updateValueAndValidity({ emitEvent: false });
     consider.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private setPrepaidValidators(enabled: boolean): void {
+    const kind = this.form.controls.prepaidKind;
+    if (enabled) {
+      kind.setValidators([Validators.required]);
+    } else {
+      kind.clearValidators();
+    }
+    kind.updateValueAndValidity({ emitEvent: false });
   }
 
   private parseBalance(v: string | number): number | null {

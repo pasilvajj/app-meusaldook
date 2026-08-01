@@ -217,8 +217,9 @@
                 mat-cell
                 *matCellDef="let item"
                 class="tx-col-balance tx-col-num"
-                [class.tx-num-neg]="item.balance < 0"
-                [class.tx-num-pos]="item.balance >= 0"
+                [class.tx-ledger-balance--muted]="ledgerBalanceMuted(item)"
+                [class.tx-num-neg]="!ledgerBalanceMuted(item) && item.balance < 0"
+                [class.tx-num-pos]="!ledgerBalanceMuted(item) && item.balance >= 0"
               >
                 <span class="tx-num-cell">{{ item.balance | number: '1.2-2':'pt-BR' }}</span>
               </td>

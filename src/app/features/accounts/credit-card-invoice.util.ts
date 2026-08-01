@@ -521,6 +521,31 @@ export function isInvoicePaymentTransaction(tx: TransactionResponse): boolean {
   return (tx.description ?? '').trim().toLowerCase().startsWith('pagamento fatura');
 }
 
+function isInCalendarMonth(occurredAt: string, year: number, month: number): boolean {
+  const d = new Date(occurredAt);
+  return d.getFullYear() === year && d.getMonth() + 1 === month;
+}
+
+/** Despesas de caixa no mês, todas as contas (exc. cartão), agrupadas por categoria. */
+export function aggregateExpenseByCategoryFromTransactions(
+  transactions: TransactionResponse[],
+  year: number,
+  month: number,
+): { categoryName: string; total: number }[] {
+  const map = new Map<string, number>();
+  for (const tx of transactions) {
+    if (tx.kind !== 'EXPENSE') continue;
+    if (isInvoicePaymentTransaction(tx)) continue;
+    if (!isInCalendarMonth(tx.occurredAt, year, month)) continue;
+    const name = tx.categoryName?.trim() || 'Sem categoria';
+    map.set(name, (map.get(name) ?? 0) + Number(tx.amount || 0));
+  }
+  return [...map.entries()]
+    .map(([categoryName, total]) => ({ categoryName, total }))
+    .filter((r) => Math.abs(r.total) > 1e-9)
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+}
+
 /** Caixa (byCategory) + compras no cartão das faturas abertas, agrupadas por categoria. */
 export function mergeExpenseCategoriesForDonut(
   cashByCategory: { categoryName: string; total: number }[],

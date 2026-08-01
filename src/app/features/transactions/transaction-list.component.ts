@@ -31,6 +31,7 @@ import {
 } from './fixed-expense-utils';
 import { uiAccountFromApi } from '../accounts/account-api.mapper';
 import type { UiAccount } from '../accounts/account.models';
+import { isPrepaidAccount } from '../accounts/account.models';
 
 type TxUiStatus = 'PENDENTE' | 'AGENDADO' | 'CONFIRMADO' | 'CONCILIADO';
 
@@ -76,7 +77,12 @@ function ledgerAnchorStart(acc: UiAccount | null): Date {
 }
 
 /** Saldo acumulado até ao último instante do mês anterior ao `focus` (inclui saldo inicial da conta se já ocorrido). */
-function computeBalanceAtEndOfPreviousMonth(focus: Date, acc: UiAccount | null, txsThroughPrevEnd: TransactionResponse[]): number {
+function computeBalanceAtEndOfPreviousMonth(
+  focus: Date,
+  acc: UiAccount | null,
+  txsThroughPrevEnd: TransactionResponse[],
+  includeTx: (tx: TransactionResponse) => boolean = () => true,
+): number {
   const y = focus.getFullYear();
   const m = focus.getMonth() + 1;
   let py = y;
@@ -92,6 +98,7 @@ function computeBalanceAtEndOfPreviousMonth(focus: Date, acc: UiAccount | null, 
   const evs: Ev[] = [];
 
   for (const t of txsThroughPrevEnd) {
+    if (!includeTx(t)) continue;
     const tMs = new Date(t.occurredAt).getTime();
     if (!Number.isFinite(tMs) || tMs > endMs) continue;
     const delta = t.kind === 'INCOME' ? Number(t.amount) : -Number(t.amount);
@@ -160,6 +167,7 @@ export class TransactionListComponent implements OnInit {
   /** Movimentos desde o mês de referência do saldo inicial até ao fim do mês anterior (para calcular carry-over). */
   readonly txsThroughPriorMonthEnd = signal<TransactionResponse[]>([]);
   readonly principalAccount = signal<UiAccount | null>(null);
+  readonly accountsByKey = signal<Map<string, UiAccount>>(new Map());
   readonly loading = signal(true);
   readonly totalElements = signal(0);
   readonly pageSize = signal(20);
@@ -200,7 +208,12 @@ export class TransactionListComponent implements OnInit {
       agg.set(key, (agg.get(key) ?? 0) + openingSigned);
     }
     if (acc && !openingInMonth) {
-      const carry = computeBalanceAtEndOfPreviousMonth(f, acc, this.txsThroughPriorMonthEnd());
+      const carry = computeBalanceAtEndOfPreviousMonth(
+        f,
+        acc,
+        this.txsThroughPriorMonthEnd(),
+        (tx) => this.txAffectsLedgerBalance(tx),
+      );
       if (Math.abs(carry) > 1e-9) {
         const key = acc.name || 'Conta principal';
         agg.set(key, (agg.get(key) ?? 0) + carry);
@@ -269,10 +282,18 @@ export class TransactionListComponent implements OnInit {
         excludeCreditCards: true,
       }),
       account: this.accountApi.getByPublicKey('principal').pipe(catchError(() => of(null))),
+      accounts: this.accountApi.list().pipe(catchError(() => of([]))),
     })
       .pipe(
-        switchMap(({ page, account }) => {
+        switchMap(({ page, account, accounts }) => {
           const accUi = account ? uiAccountFromApi(account) : null;
+          const byKey = new Map<string, UiAccount>();
+          for (const a of accounts) {
+            const ui = uiAccountFromApi(a);
+            byKey.set(ui.publicKey, ui);
+          }
+          if (accUi) byKey.set(accUi.publicKey, accUi);
+          this.accountsByKey.set(byKey);
           const anchor = ledgerAnchorStart(accUi);
           if (prevEnd.getTime() < anchor.getTime()) {
             return of({ page, account: accUi, hist: [] as TransactionResponse[] });
@@ -383,7 +404,12 @@ export class TransactionListComponent implements OnInit {
     const ibd = acc?.initialBalanceDate?.slice(0, 10);
     const openingInMonth = !!(acc && ibd && isYyyyMmDayInMonth(ibd, y, mo) && openingSigned !== 0);
 
-    const priorClosing = computeBalanceAtEndOfPreviousMonth(focus, acc, this.txsThroughPriorMonthEnd());
+    const priorClosing = computeBalanceAtEndOfPreviousMonth(
+      focus,
+      acc,
+      this.txsThroughPriorMonthEnd(),
+      (tx) => this.txAffectsLedgerBalance(tx),
+    );
     const hasPriorCarry = !openingInMonth && Math.abs(priorClosing) > 1e-9;
 
     const sortable: Omit<LedgerRowView, 'balance'>[] = [];
@@ -440,9 +466,24 @@ export class TransactionListComponent implements OnInit {
       const delta =
         item.signedAmount ??
         (item.tx ? this.signedAmount(item.tx) : 0);
+      if (item.kind === 'tx' && item.tx && !this.txAffectsLedgerBalance(item.tx)) {
+        return { ...item, balance: run };
+      }
       run += delta;
       return { ...item, balance: run };
     });
+  }
+
+  /** Conta pré-paga aparece na lista mas não altera o saldo acumulado da conta corrente. */
+  txAffectsLedgerBalance(tx: TransactionResponse): boolean {
+    const pk = tx.accountPublicKey?.trim() || 'principal';
+    const acc = this.accountsByKey().get(pk);
+    if (acc && isPrepaidAccount(acc.accountType)) return false;
+    return true;
+  }
+
+  ledgerBalanceMuted(item: LedgerRowView): boolean {
+    return item.kind === 'tx' && !!item.tx && !this.txAffectsLedgerBalance(item.tx);
   }
 
   toggleExpandedView(): void {

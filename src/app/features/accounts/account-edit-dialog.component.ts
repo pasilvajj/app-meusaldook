@@ -26,8 +26,10 @@ import {
   ACCOUNT_TYPE_OPTIONS,
   CONSIDER_BALANCE_OPTIONS,
   CREDIT_CARD_CONSIDER_BALANCE_OPTIONS,
+  PREPAID_KIND_OPTIONS,
   AccountEditDialogData,
   AccountType,
+  PrepaidKind,
   UiAccount,
 } from './account.models';
 
@@ -57,6 +59,7 @@ export class AccountEditDialogComponent {
   private readonly snack = inject(MatSnackBar);
 
   readonly typeOptions = ACCOUNT_TYPE_OPTIONS;
+  readonly prepaidKindOptions = PREPAID_KIND_OPTIONS;
   readonly considerOptions = CONSIDER_BALANCE_OPTIONS;
   readonly creditCardConsiderOptions = CREDIT_CARD_CONSIDER_BALANCE_OPTIONS;
   readonly saving = signal(false);
@@ -68,6 +71,7 @@ export class AccountEditDialogComponent {
 
   readonly form = this.fb.nonNullable.group({
     accountType: [this.data.account.accountType ?? 'CHECKING', Validators.required],
+    prepaidKind: [(this.data.account.prepaidKind ?? 'MEAL_VOUCHER') as PrepaidKind, Validators.required],
     currency: [(this.data.account.currency ?? 'BRL') as 'BRL', Validators.required],
     name: [this.data.account.name, [Validators.required, Validators.maxLength(120)]],
     initialBalanceDate: [this.data.account.initialBalanceDate ?? '', Validators.required],
@@ -86,10 +90,17 @@ export class AccountEditDialogComponent {
   });
 
   readonly isCreditCard = computed(() => this.formTick().accountType === 'CREDIT_CARD');
+  readonly isPrepaid = computed(() => this.formTick().accountType === 'PREPAID');
 
   readonly considerOptionsForType = computed(() =>
     this.isCreditCard() ? this.creditCardConsiderOptions : this.considerOptions,
   );
+
+  readonly selectedPrepaidHint = computed(() => {
+    if (!this.isPrepaid()) return '';
+    const kind = this.formTick().prepaidKind as PrepaidKind;
+    return this.prepaidKindOptions.find((o) => o.id === kind)?.hint ?? '';
+  });
 
   readonly considerBalanceLabel = computed(() =>
     this.isCreditCard() ? 'Prever débito na conta' : 'Considerar saldo',
@@ -149,6 +160,7 @@ export class AccountEditDialogComponent {
     const v = this.form.getRawValue();
     const prev = this.data.account;
     const isCard = v.accountType === 'CREDIT_CARD';
+    const isPrepaidAcc = v.accountType === 'PREPAID';
     const signed = isCard
       ? Math.abs(v.initialBalanceAmount)
       : v.saldoCreditorDebtor === 'CREDITOR'
@@ -159,9 +171,10 @@ export class AccountEditDialogComponent {
       name: v.name.trim(),
       currency: v.currency,
       accountType: v.accountType as AccountType,
+      prepaidKind: isPrepaidAcc ? (v.prepaidKind as PrepaidKind) : null,
       initialBalanceDate: v.initialBalanceDate,
       initialBalanceAmount: Math.abs(v.initialBalanceAmount),
-      saldoCreditorDebtor: isCard ? 'CREDITOR' : v.saldoCreditorDebtor,
+      saldoCreditorDebtor: isCard ? 'CREDITOR' : isPrepaidAcc ? 'CREDITOR' : v.saldoCreditorDebtor,
       considerBalanceMode: v.considerBalanceMode,
       initialBalance: signed,
       creditCardDueDay: isCard ? Number(v.creditCardDueDay) : null,
@@ -191,7 +204,9 @@ export class AccountEditDialogComponent {
 
   private applyTypeRules(type: AccountType): void {
     const isCard = type === 'CREDIT_CARD';
+    const isPrepaidAcc = type === 'PREPAID';
     this.setCreditCardValidators(isCard);
+    this.setPrepaidValidators(isPrepaidAcc);
     if (isCard) {
       if (!this.form.controls.creditCardNextInvoiceDate.value) {
         this.syncCreditCardDates();
@@ -199,6 +214,8 @@ export class AccountEditDialogComponent {
       if (this.form.controls.considerBalanceMode.value === 'IMMEDIATE') {
         this.form.controls.considerBalanceMode.setValue('PENDING');
       }
+    } else if (isPrepaidAcc) {
+      this.form.controls.considerBalanceMode.setValue('IMMEDIATE');
     }
   }
 
@@ -232,5 +249,15 @@ export class AccountEditDialogComponent {
     closing.updateValueAndValidity({ emitEvent: false });
     balanceDate.updateValueAndValidity({ emitEvent: false });
     saldoNature.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private setPrepaidValidators(enabled: boolean): void {
+    const kind = this.form.controls.prepaidKind;
+    if (enabled) {
+      kind.setValidators([Validators.required]);
+    } else {
+      kind.clearValidators();
+    }
+    kind.updateValueAndValidity({ emitEvent: false });
   }
 }

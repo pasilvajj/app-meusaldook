@@ -127,6 +127,19 @@
             </mat-form-field>
           </div>
 
+          @if (selectedPrepaidBalance() != null) {
+            <p
+              class="tx-prepaid-balance"
+              [class.tx-prepaid-balance--warn]="isPrepaidInsufficient()"
+            >
+              Saldo disponível: {{ selectedPrepaidBalance() | number: '1.2-2' : 'pt-BR' }}
+              @if (isCreateExpense()) {
+                · após despesa:
+                {{ prepaidBalanceAfterExpense() | number: '1.2-2' : 'pt-BR' }}
+              }
+            </p>
+          }
+
           <div class="tx-exp-row">
             <mat-form-field appearance="outline" class="tx-field tx-field--full">
               <mat-label>Categoria</mat-label>
@@ -135,6 +148,9 @@
                   <mat-option [value]="c.id">{{ c.name }}</mat-option>
                 }
               </mat-select>
+              @if (prepaidCategoryHint()) {
+                <mat-hint>{{ prepaidCategoryHint() }}</mat-hint>
+              }
             </mat-form-field>
           </div>
 

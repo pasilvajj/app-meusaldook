@@ -163,3 +163,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+.acc-prepaid-hint {
+  margin: -0.25rem 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.acc-field--prepaid ::ng-deep .mat-mdc-form-field-hint {
+  color: #c2410c;
+}

@@ -121,6 +121,40 @@
           }
         </mat-select>
       </mat-form-field>
+    } @else if (isPrepaid()) {
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Categoria do vale</mat-label>
+        <mat-select formControlName="prepaidKind" required>
+          @for (opt of prepaidKindOptions; track opt.id) {
+            <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (selectedPrepaidHint()) {
+        <p class="acc-prepaid-hint">{{ selectedPrepaidHint() }}</p>
+      }
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Data do saldo</mat-label>
+        <input matInput type="date" formControlName="initialBalanceDate" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full acc-field--prepaid">
+        <mat-label>Saldo disponível (R$)</mat-label>
+        <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
+        <input
+          matInput
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          required
+          [value]="balanceAmountText()"
+          (input)="onBalanceAmountInput($event)"
+          (blur)="onBalanceAmountBlur()"
+        />
+        <mat-hint>Despesas abatem diretamente deste saldo.</mat-hint>
+      </mat-form-field>
     } @else {
       <mat-form-field appearance="outline" class="acc-field acc-field--full">
         <mat-label>Data do saldo inicial</mat-label>

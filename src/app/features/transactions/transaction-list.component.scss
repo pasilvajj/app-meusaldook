@@ -376,6 +376,12 @@
   font-weight: 600;
 }
 
+.tx-table .mat-mdc-cell.tx-col-balance.tx-ledger-balance--muted,
+.tx-table .mat-mdc-cell.tx-col-balance.tx-ledger-balance--muted .tx-num-cell {
+  color: var(--tx-text-muted, #94a3b8);
+  font-weight: 500;
+}
+
 .tx-row-date {
   display: inline-flex;
   align-items: center;

@@ -38,16 +38,40 @@
               <h2 class="contas-group-title" [id]="'grp-' + group.id">{{ group.title }}</h2>
               <div class="contas-card">
                 @for (acc of group.accounts; track acc.serverId) {
-                  <div class="contas-row" [class.contas-row--inactive]="!acc.active">
+                  <div
+                    class="contas-row"
+                    [class.contas-row--inactive]="!acc.active"
+                    [class.contas-row--prepaid]="isPrepaidAccount(acc.accountType)"
+                  >
                     <div class="contas-row-main">
-                      <mat-icon class="contas-row-icon">savings</mat-icon>
-                      <span class="contas-row-name">{{ acc.name }}</span>
+                      <mat-icon
+                        class="contas-row-icon"
+                        [class.contas-row-icon--prepaid]="isPrepaidAccount(acc.accountType)"
+                      >{{ accountTypeIcon(acc.accountType) }}</mat-icon>
+                      <div class="contas-row-text">
+                        <span class="contas-row-name">{{ acc.name }}</span>
+                        @if (isPrepaidAccount(acc.accountType)) {
+                          <span class="contas-row-sub">{{ prepaidKindLabel(acc.prepaidKind) }}</span>
+                        }
+                      </div>
                     </div>
                     <div class="contas-row-meta">
-                      <span class="contas-row-hint">Considerar saldo</span>
+                      @if (isPrepaidAccount(acc.accountType)) {
+                        <span class="contas-row-hint">Saldo disponível</span>
+                        <span
+                          class="contas-balance"
+                          [class.contas-balance--low]="prepaidBalanceTone(prepaidBalance(acc)) === 'low'"
+                          [class.contas-balance--empty]="prepaidBalanceTone(prepaidBalance(acc)) === 'empty'"
+                        >
+                          {{ prepaidBalance(acc) | number: '1.2-2' : 'pt-BR' }}
+                        </span>
+                      } @else {
+                        <span class="contas-row-hint">Considerar saldo</span>
+                      }
                       <span
                         class="contas-badge"
-                        [class.contas-badge--ok]="acc.active"
+                        [class.contas-badge--ok]="acc.active && !isPrepaidAccount(acc.accountType)"
+                        [class.contas-badge--prepaid]="acc.active && isPrepaidAccount(acc.accountType)"
                         [class.contas-badge--off]="!acc.active"
                         >{{ acc.statusLabel }}</span
                       >

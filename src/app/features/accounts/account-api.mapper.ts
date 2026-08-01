@@ -1,5 +1,10 @@
-import type { AccountApiResponse, AccountTypeDto, AccountWriteRequestDto } from '../../core/models/account-api.types';
-import { ACCOUNT_TYPE_OPTIONS, AccountType, UiAccount, UiAccountGroup } from './account.models';
+import type {
+  AccountApiResponse,
+  AccountTypeDto,
+  AccountWriteRequestDto,
+  PrepaidKindDto,
+} from '../../core/models/account-api.types';
+import { ACCOUNT_TYPE_OPTIONS, AccountType, PrepaidKind, UiAccount, UiAccountGroup } from './account.models';
 
 export function uiAccountFromApi(r: AccountApiResponse): UiAccount {
   const accountType = r.accountType as AccountType;
@@ -15,6 +20,8 @@ export function uiAccountFromApi(r: AccountApiResponse): UiAccount {
     statusLabel: r.statusLabel,
     currency: r.currency,
     accountType,
+    prepaidKind: (r.prepaidKind as PrepaidKind | null | undefined) ?? null,
+    currentBalance: r.currentBalance != null ? Number(r.currentBalance) : null,
     initialBalance: Number(r.signedInitialBalance),
     initialBalanceAmount: Number(r.initialBalanceAmount),
     initialBalanceDate: ibd,
@@ -40,6 +47,7 @@ export function groupsFromAccounts(accounts: UiAccount[]): UiAccountGroup[] {
   }
   return [
     { id: 'checking', title: 'Conta corrente', accounts: map.get('CHECKING')! },
+    { id: 'prepaid', title: 'Conta pré-paga', accounts: map.get('PREPAID')! },
     { id: 'credit', title: 'Cartão de crédito', accounts: map.get('CREDIT_CARD')! },
     { id: 'cash', title: 'Dinheiro', accounts: map.get('CASH')! },
     { id: 'other', title: 'Outros ativos', accounts: map.get('OTHER_ASSET')! },
@@ -56,6 +64,7 @@ export function writeDtoForCreate(params: {
   creditCardDueDay?: number | null;
   creditCardNextInvoiceDate?: string | null;
   creditCardClosingDaysBeforeDue?: number | null;
+  prepaidKind?: PrepaidKind | null;
   initialBalanceDate: string;
   notes?: string | null;
   publicKey?: string | null;
@@ -73,6 +82,7 @@ export function writeDtoForCreate(params: {
     creditCardDueDay: params.creditCardDueDay ?? null,
     creditCardNextInvoiceDate: params.creditCardNextInvoiceDate ?? null,
     creditCardClosingDaysBeforeDue: params.creditCardClosingDaysBeforeDue ?? null,
+    prepaidKind: (params.prepaidKind as PrepaidKindDto | null | undefined) ?? null,
     notes: params.notes ?? null,
   };
 }
@@ -95,6 +105,7 @@ export function writeDtoFromUi(
     creditCardDueDay: a.creditCardDueDay ?? null,
     creditCardNextInvoiceDate: a.creditCardNextInvoiceDate ?? null,
     creditCardClosingDaysBeforeDue: a.creditCardClosingDaysBeforeDue ?? null,
+    prepaidKind: (a.prepaidKind as PrepaidKindDto | null | undefined) ?? null,
     notes: a.notes ?? null,
     ...overrides,
   };

@@ -223,6 +223,23 @@
   padding-left: 2rem;
 }
 
+.tx-prepaid-balance {
+  margin: -0.35rem 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.tx-prepaid-balance--warn {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
 @media (max-width: 640px) {
   .tx-exp-row--3 {
     grid-template-columns: 1fr;

@@ -22,7 +22,7 @@
           type="button"
           tabindex="-1"
           class="acc-help-btn"
-          matTooltip="Conta corrente, cartão de crédito, dinheiro ou outros ativos (MVP local)."
+          matTooltip="Conta corrente, pré-paga (vale), cartão, dinheiro ou outros ativos."
           aria-label="Ajuda sobre tipo de conta"
         >
           <mat-icon>help_outline</mat-icon>
@@ -40,7 +40,9 @@
     <mat-form-field appearance="outline" class="acc-field acc-field--full">
       <mat-label>Nome</mat-label>
       <input matInput formControlName="name" required maxlength="120" autocomplete="off" />
-      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">{{ isCreditCard() ? 'credit_card' : 'savings' }}</mat-icon>
+      <mat-icon matSuffix class="acc-name-suffix" aria-hidden="true">{{
+        isCreditCard() ? 'credit_card' : isPrepaid() ? 'restaurant' : 'savings'
+      }}</mat-icon>
       @if (form.controls.name.hasError('required') && form.controls.name.touched) {
         <mat-error>Informe um nome para a conta</mat-error>
       }
@@ -121,6 +123,40 @@
             <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
           }
         </mat-select>
+      </mat-form-field>
+    } @else if (isPrepaid()) {
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Categoria do vale</mat-label>
+        <mat-select formControlName="prepaidKind" required>
+          @for (opt of prepaidKindOptions; track opt.id) {
+            <mat-option [value]="opt.id">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (selectedPrepaidHint()) {
+        <p class="acc-prepaid-hint">{{ selectedPrepaidHint() }}</p>
+      }
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full acc-field--prepaid">
+        <mat-label>Saldo disponível (R$)</mat-label>
+        <span matTextPrefix class="acc-prefix">R$&nbsp;</span>
+        <input
+          matInput
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          required
+          [value]="prepaidBalanceText()"
+          (input)="onPrepaidBalanceInput($event)"
+          (blur)="onPrepaidBalanceBlur()"
+        />
+        <mat-hint>Despesas abatem diretamente deste saldo.</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="acc-field acc-field--full">
+        <mat-label>Notas (opcional)</mat-label>
+        <textarea matInput formControlName="notes" rows="2" maxlength="500"></textarea>
       </mat-form-field>
     } @else {
       <div class="acc-extra-toggle">
